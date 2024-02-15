@@ -1,9 +1,7 @@
 export default {
   preset: "ts-jest",
   testEnvironment: "node",
-  globals: {
-    "ts-jest": {
-      tsconfig: "./tsconfig.json",
-    },
+  transform: {
+    "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "./tsconfig.json" }],
   },
 };
