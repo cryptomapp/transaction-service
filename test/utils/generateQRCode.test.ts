@@ -26,8 +26,11 @@ describe("QR Code Generation with Transaction, Merchant Details, and Current Dat
   it("should generate a QR code with transaction amount, merchant info, and current date/time", async () => {
     // Setup: Define a transaction amount and mock merchant details
     const transactionDetails: TransactionDetails = {
-      amount: 100_000_000, // 100 USDC
+      amount: 100000000, // 100 USDC
       merchantId: "merchant123",
+      receiverUsdcAccount: "",
+      daoUsdcAccount: "",
+      stateAccount: "",
     };
 
     // Generate the QR code with the provided transaction details

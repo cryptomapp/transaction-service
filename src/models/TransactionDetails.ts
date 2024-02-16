@@ -13,4 +13,19 @@ export type TransactionDetails = {
    * The unique identifier for the merchant involved in the transaction.
    */
   merchantId: string;
+
+  /**
+   * The USDC account address of the receiver in the transaction.
+   */
+  receiverUsdcAccount: string;
+
+  /**
+   * The USDC account address for the DAO involved in the transaction.
+   */
+  daoUsdcAccount: string;
+
+  /**
+   * The state account used in the transaction.
+   */
+  stateAccount: string;
 };

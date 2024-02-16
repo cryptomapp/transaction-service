@@ -1,5 +1,8 @@
 import { Server } from "ws";
 import { config } from "./config";
+import { v4 as uuidv4 } from "uuid";
+import { TransactionDetails } from "./models/TransactionDetails";
+import { Session } from "./models/Session";
 
 const timeout = config.timeout;
 const sessions: Record<string, Session> = {};
@@ -18,39 +21,53 @@ export const startServer = (port: number): Promise<Server> => {
     });
 
     server.on("connection", (ws, req) => {
-      const urlParams = new URL(req.url!, `ws://${req.headers.host}`)
-        .searchParams;
-      const sessionId = urlParams.get("sessionId");
-
-      if (!sessionId) {
-        console.log("Session ID not provided.");
-        ws.close(1008, "Session ID not provided.");
-        return;
-      }
-
-      // Check and potentially create a session if it does not exist
-      if (!sessions[sessionId]) {
-        createSessionWithTimeout(sessionId);
-      } else if (sessions[sessionId].expired) {
-        // Check if the session has already expired
-        ws.send(
-          JSON.stringify({
-            status: "error",
-            error: "Session expired or not found",
-          })
-        );
-        ws.close(1008, "Session expired or not found");
-        return;
-      }
-
-      console.log(`Client attempting to join with session ID: ${sessionId}`);
-
-      ws.on("message", (message) => {
+      ws.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
-          if (data.action === "joinSession" && data.sessionId === sessionId) {
+
+          if (data.action === "createSession") {
+            const sessionId = uuidv4();
+            const { transactionDetails } = data;
+            createSessionWithTimeout(sessionId, transactionDetails);
+            ws.send(
+              JSON.stringify({
+                status: "success",
+                action: "sessionCreated",
+                sessionId: sessionId,
+              })
+            );
+            return;
+          }
+
+          const sessionId = data.sessionId;
+          if (!sessionId) {
+            console.log("Session ID not provided.");
+            ws.close(1008, "Session ID not provided.");
+            return;
+          }
+
+          if (!sessions[sessionId]) {
+            console.log("Session ID not found.");
+            ws.close(1008, "Session ID not found.");
+            return;
+          } else if (sessions[sessionId].expired) {
+            ws.send(
+              JSON.stringify({
+                status: "error",
+                error: "Session expired or not found",
+              })
+            );
+            ws.close(1008, "Session expired or not found");
+            return;
+          }
+
+          if (
+            data.action === "joinSession" &&
+            sessions[sessionId] &&
+            !sessions[sessionId].expired
+          ) {
             sessions[sessionId].joined = true;
-            clearTimeout(sessions[sessionId].timer); // Clear the expiration timer
+            clearTimeout(sessions[sessionId].timer);
             ws.send(
               JSON.stringify({
                 status: "success",
@@ -58,6 +75,28 @@ export const startServer = (port: number): Promise<Server> => {
                 sessionId,
               })
             );
+          }
+
+          if (data.action === "requestTransactionDetails") {
+            const sessionId = data.sessionId;
+            if (sessions[sessionId] && !sessions[sessionId].expired) {
+              const transactionDetails = sessions[sessionId].transactionDetails;
+              ws.send(
+                JSON.stringify({
+                  status: "success",
+                  action: "transactionDetails",
+                  details: transactionDetails,
+                })
+              );
+            } else {
+              ws.send(
+                JSON.stringify({
+                  status: "error",
+                  error: "Session expired or not found",
+                })
+              );
+            }
+            return;
           }
         } catch (error) {
           console.error("Error processing message:", error);
@@ -70,9 +109,12 @@ export const startServer = (port: number): Promise<Server> => {
   });
 };
 
-export const createSessionWithTimeout = (sessionId: string) => {
+export const createSessionWithTimeout = (
+  sessionId: string,
+  transactionDetails: TransactionDetails
+) => {
   if (!sessions[sessionId] || sessions[sessionId].expired) {
-    sessions[sessionId] = { joined: false, expired: false };
+    sessions[sessionId] = { joined: false, expired: false, transactionDetails };
     sessions[sessionId].timer = setTimeout(() => {
       sessions[sessionId].expired = true;
       console.log(`Session ${sessionId} expired due to inactivity.`);

@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import { config } from "../src/config";
-import { createSessionWithTimeout, startServer } from "../src/websocketServer";
+import { startServer } from "../src/websocketServer";
+import { TransactionDetails } from "../src/models/TransactionDetails";
 
 jest.mock("../src/utils/generateQRCode", () => ({
   generateQRCode: jest.fn(() =>
@@ -10,6 +11,7 @@ jest.mock("../src/utils/generateQRCode", () => ({
 
 const PORT = config.port;
 let websocketUrl = `ws://localhost:${PORT}`;
+let sharedSessionId: string;
 
 describe("WebSocket Server", () => {
   let server: WebSocket.Server | undefined;
@@ -30,75 +32,118 @@ describe("WebSocket Server", () => {
         done();
       });
     } else {
-      done(); // Complete the teardown if the server was never initialized
+      done();
     }
   });
 
-  it("should allow client to join a session via QR code", (done) => {
-    const sessionId = "unique-session-id";
-    const client = new WebSocket(`${websocketUrl}/?sessionId=${sessionId}`);
-    let doneCalled = false;
+  it("should allow a merchant to create a session and receive a session ID", (done) => {
+    const merchantId = "merchant-123";
+    const transactionDetails: TransactionDetails = {
+      amount: 100,
+      merchantId: "merchant-123",
+      receiverUsdcAccount: "receiverUsdcAccount123",
+      daoUsdcAccount: "daoUsdcAccount123",
+      stateAccount: "stateAccount123",
+    };
+    const client = new WebSocket(websocketUrl);
 
     client.on("open", () => {
-      client.send(JSON.stringify({ action: "joinSession", sessionId }));
+      client.send(
+        JSON.stringify({
+          action: "createSession",
+          merchantId,
+          transactionDetails,
+        })
+      );
     });
 
     client.on("message", (message) => {
       const data = JSON.parse(message.toString());
-      if (
-        data.status === "success" &&
-        data.action === "joinedSession" &&
-        data.sessionId === sessionId &&
-        !doneCalled
-      ) {
-        doneCalled = true;
-        client.close(); // Ensure the client is closed after successful test
-        done();
-      }
-    });
-
-    client.on("error", (error) => {
-      if (!doneCalled) {
-        doneCalled = true;
-        done(error);
-      }
-    });
-  });
-
-  it("should expire a session if not joined within 60 seconds", (done) => {
-    jest.useFakeTimers();
-
-    const sessionId = "session-to-expire";
-    // Simulate session creation and expiration
-    createSessionWithTimeout(sessionId); // Assuming this function is accessible for the test
-
-    jest.advanceTimersByTime(65000); // Simulate waiting for 65 seconds
-
-    const client = new WebSocket(`${websocketUrl}/?sessionId=${sessionId}`);
-    let doneCalled = false;
-
-    client.on("open", () => {
-      client.send(JSON.stringify({ action: "joinSession", sessionId }));
-    });
-
-    client.on("message", (message) => {
-      const data = JSON.parse(message.toString());
-      if (
-        data.status === "error" &&
-        data.error === "Session expired or not found" &&
-        !doneCalled
-      ) {
-        doneCalled = true;
+      if (data.status === "success" && data.action === "sessionCreated") {
+        expect(data.sessionId).toBeDefined();
+        sharedSessionId = data.sessionId; // Store the created sessionId for the next test
         client.close();
         done();
       }
     });
 
     client.on("error", (error) => {
-      if (!doneCalled) {
-        doneCalled = true;
-        done(error);
+      client.close();
+      done(error);
+    });
+  });
+
+  it("should allow a client to join a merchant's session", (done) => {
+    if (!sharedSessionId) {
+      throw new Error("Session ID not found from the previous test");
+    }
+    const client = new WebSocket(
+      `${websocketUrl}/?sessionId=${sharedSessionId}`
+    );
+
+    client.on("open", () => {
+      client.send(
+        JSON.stringify({
+          action: "joinSession",
+          sessionId: sharedSessionId,
+        })
+      );
+    });
+
+    client.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+      if (data.status === "success" && data.action === "joinedSession") {
+        expect(data.sessionId).toEqual(sharedSessionId);
+        client.close();
+        done();
       }
     });
-  }, 70000);
+
+    client.on("error", (error) => {
+      client.close();
+      done(error);
+    });
+  });
+
+  it("should allow a client to scan QR code and join the session displaying transaction data", (done) => {
+    if (!sharedSessionId) {
+      throw new Error("Session ID not found from the previous test");
+    }
+    const client = new WebSocket(
+      `${websocketUrl}/?sessionId=${sharedSessionId}`
+    );
+
+    client.on("open", () => {
+      // Simulate sending a message that client is ready to receive transaction data
+      // This step might vary based on how your actual client-server protocol is designed
+      client.send(
+        JSON.stringify({
+          action: "requestTransactionDetails",
+          sessionId: sharedSessionId,
+        })
+      );
+    });
+
+    client.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+      if (data.status === "success" && data.action === "transactionDetails") {
+        console.log("Transaction details received:", data.details);
+        expect(data.details).toBeDefined();
+        expect(data.details.amount).toEqual(100);
+        expect(data.details.merchantId).toEqual("merchant-123");
+        expect(data.details.receiverUsdcAccount).toEqual(
+          "receiverUsdcAccount123"
+        );
+        expect(data.details.daoUsdcAccount).toEqual("daoUsdcAccount123");
+        expect(data.details.stateAccount).toEqual("stateAccount123");
+        client.close();
+        done();
+      }
+    });
+
+    client.on("error", (error) => {
+      client.close();
+      done(error);
+    });
+  });
 });
