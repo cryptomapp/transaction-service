@@ -98,6 +98,35 @@ export const startServer = (port: number): Promise<Server> => {
             }
             return;
           }
+
+          // Add logic here to handle the submission of a signed transaction
+          if (data.action === "submitTransaction") {
+            const sessionId = data.sessionId;
+            // In a real application, you'd verify the transaction details here,
+            // including the signature. For the sake of this example, we'll assume
+            // the transaction is valid and simply return a success message.
+
+            // Check if the session is valid and not expired
+            if (sessions[sessionId] && !sessions[sessionId].expired) {
+              // Send a success message back to the client
+              ws.send(
+                JSON.stringify({
+                  status: "success",
+                  action: "transactionSubmitted",
+                  result: "Transaction processed successfully",
+                })
+              );
+            } else {
+              // Session is invalid or expired
+              ws.send(
+                JSON.stringify({
+                  status: "error",
+                  error: "Invalid or expired session",
+                })
+              );
+            }
+            return;
+          }
         } catch (error) {
           console.error("Error processing message:", error);
           ws.close(1002, "Protocol error");

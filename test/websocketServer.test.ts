@@ -146,4 +146,64 @@ describe("WebSocket Server", () => {
       done(error);
     });
   });
+
+  it("should allow a client to submit a signed transaction", (done) => {
+    if (!sharedSessionId) {
+      throw new Error("Session ID not found from the previous test");
+    }
+    const client = new WebSocket(
+      `${websocketUrl}/?sessionId=${sharedSessionId}`
+    );
+
+    client.on("open", () => {
+      // First, simulate the client requesting transaction details
+      client.send(
+        JSON.stringify({
+          action: "requestTransactionDetails",
+          sessionId: sharedSessionId,
+        })
+      );
+    });
+
+    client.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+
+      // Once transaction details are received, simulate constructing and signing the transaction
+      if (data.status === "success" && data.action === "transactionDetails") {
+        // Here, you would typically use data.details to construct the transaction
+        // For the sake of this test, we'll simulate this with mocked data
+
+        // Simulate client constructing and signing a transaction
+        const signedTransactionData = {
+          action: "submitTransaction",
+          sessionId: sharedSessionId,
+          transaction: {
+            // Mock data representing the transaction signature and other necessary details
+            senderPublicKey: "clientPublicKey123",
+            signature: "signedTransactionDataHere",
+            // Include any other fields that your server expects
+          },
+        };
+
+        client.send(JSON.stringify(signedTransactionData));
+      } else if (
+        data.status === "success" &&
+        data.action === "transactionSubmitted"
+      ) {
+        // This is the response to the submission of the signed transaction
+        // Validate the server's response to ensure it processed the transaction
+        expect(data).toHaveProperty(
+          "result",
+          "Transaction processed successfully"
+        );
+        client.close();
+        done();
+      }
+    });
+
+    client.on("error", (error) => {
+      client.close();
+      done(error);
+    });
+  });
 });
