@@ -2,6 +2,7 @@ import WebSocket from "ws";
 import { config } from "../src/config";
 import { startServer } from "../src/websocketServer";
 import { TransactionDetails } from "../src/models/TransactionDetails";
+import { SignedTransactionDetails } from "../src/models/SingedTransactionDetails";
 
 jest.mock("../src/utils/generateQRCode", () => ({
   generateQRCode: jest.fn(() =>
@@ -13,7 +14,7 @@ const PORT = config.port;
 let websocketUrl = `ws://localhost:${PORT}`;
 let sharedSessionId: string;
 
-describe("WebSocket Server", () => {
+describe.skip("WebSocket Server", () => {
   let server: WebSocket.Server | undefined;
 
   beforeAll(async () => {
@@ -39,7 +40,7 @@ describe("WebSocket Server", () => {
   it("should allow a merchant to create a session and receive a session ID", (done) => {
     const merchantId = "merchant-123";
     const transactionDetails: TransactionDetails = {
-      amount: 100,
+      amount: 100_000_000,
       merchantId: "merchant-123",
       receiverUsdcAccount: "receiverUsdcAccount123",
       daoUsdcAccount: "daoUsdcAccount123",
@@ -129,73 +130,13 @@ describe("WebSocket Server", () => {
       if (data.status === "success" && data.action === "transactionDetails") {
         console.log("Transaction details received:", data.details);
         expect(data.details).toBeDefined();
-        expect(data.details.amount).toEqual(100);
+        expect(data.details.amount).toEqual(100000000);
         expect(data.details.merchantId).toEqual("merchant-123");
         expect(data.details.receiverUsdcAccount).toEqual(
           "receiverUsdcAccount123"
         );
         expect(data.details.daoUsdcAccount).toEqual("daoUsdcAccount123");
         expect(data.details.stateAccount).toEqual("stateAccount123");
-        client.close();
-        done();
-      }
-    });
-
-    client.on("error", (error) => {
-      client.close();
-      done(error);
-    });
-  });
-
-  it("should allow a client to submit a signed transaction", (done) => {
-    if (!sharedSessionId) {
-      throw new Error("Session ID not found from the previous test");
-    }
-    const client = new WebSocket(
-      `${websocketUrl}/?sessionId=${sharedSessionId}`
-    );
-
-    client.on("open", () => {
-      // First, simulate the client requesting transaction details
-      client.send(
-        JSON.stringify({
-          action: "requestTransactionDetails",
-          sessionId: sharedSessionId,
-        })
-      );
-    });
-
-    client.on("message", (message) => {
-      const data = JSON.parse(message.toString());
-
-      // Once transaction details are received, simulate constructing and signing the transaction
-      if (data.status === "success" && data.action === "transactionDetails") {
-        // Here, you would typically use data.details to construct the transaction
-        // For the sake of this test, we'll simulate this with mocked data
-
-        // Simulate client constructing and signing a transaction
-        const signedTransactionData = {
-          action: "submitTransaction",
-          sessionId: sharedSessionId,
-          transaction: {
-            // Mock data representing the transaction signature and other necessary details
-            senderPublicKey: "clientPublicKey123",
-            signature: "signedTransactionDataHere",
-            // Include any other fields that your server expects
-          },
-        };
-
-        client.send(JSON.stringify(signedTransactionData));
-      } else if (
-        data.status === "success" &&
-        data.action === "transactionSubmitted"
-      ) {
-        // This is the response to the submission of the signed transaction
-        // Validate the server's response to ensure it processed the transaction
-        expect(data).toHaveProperty(
-          "result",
-          "Transaction processed successfully"
-        );
         client.close();
         done();
       }

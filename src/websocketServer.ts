@@ -3,6 +3,8 @@ import { config } from "./config";
 import { v4 as uuidv4 } from "uuid";
 import { TransactionDetails } from "./models/TransactionDetails";
 import { Session } from "./models/Session";
+import { verifyClientSignature } from "./utils/signatureVerifier";
+import { SignedTransactionDetails } from "./models/SingedTransactionDetails";
 
 const timeout = config.timeout;
 const sessions: Record<string, Session> = {};
@@ -99,29 +101,55 @@ export const startServer = (port: number): Promise<Server> => {
             return;
           }
 
-          // Add logic here to handle the submission of a signed transaction
           if (data.action === "submitTransaction") {
             const sessionId = data.sessionId;
-            // In a real application, you'd verify the transaction details here,
-            // including the signature. For the sake of this example, we'll assume
-            // the transaction is valid and simply return a success message.
+            const signedTransactionDetails: SignedTransactionDetails =
+              data.transaction;
 
-            // Check if the session is valid and not expired
-            if (sessions[sessionId] && !sessions[sessionId].expired) {
-              // Send a success message back to the client
-              ws.send(
-                JSON.stringify({
-                  status: "success",
-                  action: "transactionSubmitted",
-                  result: "Transaction processed successfully",
-                })
+            try {
+              const isValidSignature = await verifyClientSignature(
+                signedTransactionDetails
               );
-            } else {
-              // Session is invalid or expired
+
+              if (!isValidSignature) {
+                ws.send(
+                  JSON.stringify({
+                    status: "error",
+                    error: "Invalid signature",
+                  })
+                );
+                return;
+              }
+
+              // Signature is valid, and session is valid and not expired
+              if (sessions[sessionId] && !sessions[sessionId].expired) {
+                // Implement logic to involve the service wallet here
+
+                // Send a success message back to the client
+                ws.send(
+                  JSON.stringify({
+                    status: "success",
+                    action: "transactionSubmitted",
+                    result: "Transaction processed successfully",
+                    signatureVerified: true, // Placeholder
+                    transactionStatus: "success", // This is a placeholder; adjust according to your actual logic
+                  })
+                );
+              } else {
+                // Session is invalid or expired
+                ws.send(
+                  JSON.stringify({
+                    status: "error",
+                    error: "Invalid or expired session",
+                  })
+                );
+              }
+            } catch (error) {
+              console.error("Failed to verify signature:", error);
               ws.send(
                 JSON.stringify({
                   status: "error",
-                  error: "Invalid or expired session",
+                  error: "Signature verification failed",
                 })
               );
             }
