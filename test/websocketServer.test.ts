@@ -2,9 +2,8 @@ import WebSocket from "ws";
 import { config } from "../src/config";
 import { startServer } from "../src/websocketServer";
 import { TransactionDetails } from "../src/models/TransactionDetails";
-import { SignedTransactionDetails } from "../src/models/SingedTransactionDetails";
 
-jest.mock("../src/utils/generateQRCode", () => ({
+jest.mock("../src/utils/QRCodeGenerator", () => ({
   generateQRCode: jest.fn(() =>
     Promise.resolve("data:image/png;base64,mockQRCodeData")
   ),

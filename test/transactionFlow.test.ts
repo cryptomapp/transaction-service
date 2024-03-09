@@ -6,7 +6,7 @@ jest.mock("../src/utils/signatureVerifier", () => ({
   verifyClientSignature: jest.fn().mockResolvedValue(true),
 }));
 
-describe.only("WebSocket Server Transaction Flow", () => {
+describe("WebSocket Server Transaction Flow", () => {
   let server: WebSocket.Server;
   let merchant: WebSocket;
   let client: WebSocket;
