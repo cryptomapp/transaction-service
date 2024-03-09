@@ -3,7 +3,6 @@ import { config } from "./config";
 import { v4 as uuidv4 } from "uuid";
 import { TransactionDetails } from "./models/TransactionDetails";
 import { Session } from "./models/Session";
-import { verifyClientSignature } from "./utils/signatureVerifier";
 import { SignedTransactionDetails } from "./models/SingedTransactionDetails";
 
 const timeout = config.timeout;
@@ -101,60 +100,60 @@ export const startServer = (port: number): Promise<Server> => {
             return;
           }
 
-          if (data.action === "submitTransaction") {
-            const sessionId = data.sessionId;
-            const signedTransactionDetails: SignedTransactionDetails =
-              data.transaction;
+          // if (data.action === "submitTransaction") {
+          //   const sessionId = data.sessionId;
+          //   const signedTransactionDetails: SignedTransactionDetails =
+          //     data.transaction;
 
-            try {
-              const isValidSignature = await verifyClientSignature(
-                signedTransactionDetails
-              );
+          //   try {
+          //     const isValidSignature = await verifyClientSignature(
+          //       signedTransactionDetails
+          //     ); // no longer valid, use transactionValidator
 
-              if (!isValidSignature) {
-                ws.send(
-                  JSON.stringify({
-                    status: "error",
-                    error: "Invalid signature",
-                  })
-                );
-                return;
-              }
+          //     if (!isValidSignature) {
+          //       ws.send(
+          //         JSON.stringify({
+          //           status: "error",
+          //           error: "Invalid signature",
+          //         })
+          //       );
+          //       return;
+          //     }
 
-              // Signature is valid, and session is valid and not expired
-              if (sessions[sessionId] && !sessions[sessionId].expired) {
-                // Implement logic to involve the service wallet here
+          //     // Signature is valid, and session is valid and not expired
+          //     if (sessions[sessionId] && !sessions[sessionId].expired) {
+          //       // Implement logic to involve the service wallet here
 
-                // Send a success message back to the client
-                ws.send(
-                  JSON.stringify({
-                    status: "success",
-                    action: "transactionSubmitted",
-                    result: "Transaction processed successfully",
-                    signatureVerified: true, // Placeholder
-                    transactionStatus: "success", // This is a placeholder; adjust according to your actual logic
-                  })
-                );
-              } else {
-                // Session is invalid or expired
-                ws.send(
-                  JSON.stringify({
-                    status: "error",
-                    error: "Invalid or expired session",
-                  })
-                );
-              }
-            } catch (error) {
-              console.error("Failed to verify signature:", error);
-              ws.send(
-                JSON.stringify({
-                  status: "error",
-                  error: "Signature verification failed",
-                })
-              );
-            }
-            return;
-          }
+          //       // Send a success message back to the client
+          //       ws.send(
+          //         JSON.stringify({
+          //           status: "success",
+          //           action: "transactionSubmitted",
+          //           result: "Transaction processed successfully",
+          //           signatureVerified: true, // Placeholder
+          //           transactionStatus: "success", // This is a placeholder; adjust according to your actual logic
+          //         })
+          //       );
+          //     } else {
+          //       // Session is invalid or expired
+          //       ws.send(
+          //         JSON.stringify({
+          //           status: "error",
+          //           error: "Invalid or expired session",
+          //         })
+          //       );
+          //     }
+          //   } catch (error) {
+          //     console.error("Failed to verify signature:", error);
+          //     ws.send(
+          //       JSON.stringify({
+          //         status: "error",
+          //         error: "Signature verification failed",
+          //       })
+          //     );
+          //   }
+          //   return;
+          // }
         } catch (error) {
           console.error("Error processing message:", error);
           ws.close(1002, "Protocol error");

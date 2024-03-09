@@ -4,57 +4,155 @@ import {
   LAMPORTS_PER_SOL,
   SystemProgram,
   Transaction,
-  sendAndConfirmTransaction,
-  TransactionConfirmationStatus,
+  PublicKey,
 } from "@solana/web3.js";
-import { validateTransaction } from "../../src/utils/transactionValidator";
+import WebSocket from "ws";
+import { startServer } from "../../src/websocketServer";
+import {
+  clientKeypair,
+  config,
+  merchantKeypair,
+  serviceWalletKeypair,
+} from "../config";
+import { TransactionDetails } from "../../src/models/TransactionDetails";
 
-const clientPrivateKey = [
-  138, 161, 192, 212, 55, 219, 233, 166, 197, 212, 139, 113, 32, 250, 89, 132,
-  154, 36, 177, 150, 227, 231, 86, 81, 201, 49, 5, 10, 232, 28, 60, 58, 57, 161,
-  171, 225, 237, 11, 101, 103, 223, 82, 2, 188, 59, 235, 229, 129, 32, 221, 109,
-  147, 9, 74, 241, 11, 98, 212, 209, 239, 50, 225, 237, 77,
-];
-const clientKeypair = Keypair.fromSecretKey(new Uint8Array(clientPrivateKey));
-
-const merchantPrivateKey = [
-  177, 102, 230, 198, 255, 225, 138, 175, 77, 20, 173, 246, 207, 55, 229, 116,
-  153, 134, 218, 106, 26, 89, 144, 8, 182, 69, 113, 237, 186, 216, 105, 238,
-  192, 80, 116, 253, 20, 116, 84, 122, 11, 95, 239, 77, 60, 59, 49, 203, 209,
-  227, 9, 233, 68, 50, 9, 79, 142, 94, 90, 216, 197, 202, 217, 180,
-];
-const merchantKeypair = Keypair.fromSecretKey(
-  new Uint8Array(merchantPrivateKey)
-);
-
-describe.only("Transaction Service Integration Tests", () => {
+describe("Transaction Service Integration Tests", () => {
+  // Solana
   const connection = new Connection(
     "https://api.devnet.solana.com",
     "confirmed"
   );
+  console.log("Connected to Solana");
+
+  const transactionAmount = 1_000_000; // 1 USDC
+
+  let merchantId: string;
+  let merchantUsdcAccount: string;
+  let daoUsdcAccount: string;
+  let stateUsdcAccount: string;
+
+  // Server
+  const PORT = config.port;
+  let server: WebSocket.Server | undefined;
+  let websocketUrl: string;
+  let sessionId: string;
+  let merchantWsClient: WebSocket;
+  let clientWsClient: WebSocket;
+
+  async function airdropIfEmpty(publicKey: PublicKey) {
+    const balance = await connection.getBalance(publicKey);
+    if (balance < LAMPORTS_PER_SOL * 0.1) {
+      console.log("Requested airdrop for ", publicKey);
+      await connection.requestAirdrop(publicKey, LAMPORTS_PER_SOL);
+    }
+  }
 
   beforeAll(async () => {
     // Check balances and airdrop if necessary
-    const clientBalance = await connection.getBalance(clientKeypair.publicKey);
-    if (clientBalance < LAMPORTS_PER_SOL * 0.1) {
-      await connection.requestAirdrop(
-        clientKeypair.publicKey,
-        LAMPORTS_PER_SOL
-      );
-    }
+    airdropIfEmpty(serviceWalletKeypair.publicKey);
 
-    const merchantBalance = await connection.getBalance(
-      merchantKeypair.publicKey
-    );
-    if (merchantBalance < LAMPORTS_PER_SOL * 0.1) {
-      await connection.requestAirdrop(
-        merchantKeypair.publicKey,
-        LAMPORTS_PER_SOL
-      );
+    // Start server
+    server = await startServer(Number(PORT));
+    const address = server.address();
+    const actualPort = typeof address === "string" ? null : address?.port;
+    if (actualPort) {
+      websocketUrl = `ws://localhost:${actualPort}`;
+    }
+    console.log("Server started at: ", websocketUrl);
+  });
+
+  afterAll((done) => {
+    if (server) {
+      server.close(() => {
+        console.log("Server closed");
+        done();
+      });
+    } else {
+      done();
     }
   });
 
-  it("Client submits a transaction to the server, and the server processes it", async () => {
+  it("POSSITIVE: Merchant receives 1 USDC from Client gasless", async () => {
+    // 1. Merchant initiate a session with requested amount and receives sessionId.
+    // UX: Merchant generates QR code.
+    merchantWsClient = new WebSocket(websocketUrl);
+
+    const transactionDetails: TransactionDetails = {
+      amount: transactionAmount,
+      merchantId: merchantId,
+      receiverUsdcAccount: merchantUsdcAccount,
+      daoUsdcAccount: daoUsdcAccount,
+      stateAccount: stateUsdcAccount,
+    };
+
+    merchantWsClient.on("open", () => {
+      merchantWsClient.send(
+        JSON.stringify({
+          action: "createSession",
+          merchantId,
+          transactionDetails,
+        })
+      );
+    });
+
+    merchantWsClient.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+      if (data.status === "success" && data.action === "sessionCreated") {
+        expect(data.sessionId).toBeDefined();
+        sessionId = data.sessionId;
+      }
+    });
+
+    // TODO: not sure if Merchant is in the room
+
+    // 2. Client joins the session and fetch transaction data.
+    // UX: Client scans QR code.
+    clientWsClient = new WebSocket(`${websocketUrl}/${sessionId}`);
+
+    clientWsClient.on("open", () => {
+      clientWsClient.send(
+        JSON.stringify({
+          action: "joinSession",
+          sessionId: sessionId,
+        })
+      );
+    });
+
+    clientWsClient.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+      if (data.status === "success" && data.action === "joinedSession") {
+        expect(data.sessionId).toEqual(sessionId);
+      }
+    });
+
+    clientWsClient.on("open", () => {
+      clientWsClient.send(
+        JSON.stringify({
+          action: "requestTransactionDetails",
+          sessionId: sessionId,
+        })
+      );
+    });
+
+    clientWsClient.on("message", (message) => {
+      const data = JSON.parse(message.toString());
+      if (data.status === "success" && data.action === "transactionDetails") {
+        expect(data.details).toBeDefined();
+        expect(data.details.amount).toEqual(transactionAmount);
+        expect(data.details.merchantId).toEqual(merchantId);
+        expect(data.details.receiverUsdcAccount).toEqual(merchantUsdcAccount);
+        expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
+        expect(data.details.stateAccount).toEqual(stateUsdcAccount);
+      }
+    });
+
+    // 3. Client build a transaction, sign it, serialize and submit to the server.
+    // 4. Server receives, deserialize and validate the transaction.
+    // 5. Server sign transaction with ServiceWallet and send it on-chain.
+    // 6. Server receives response from Solana and notify Client and Merchant.
+  });
+
+  it.skip("Client submits a transaction to the server, and the server processes it", async () => {
     // Fetch the latest blockhash
     const { blockhash, lastValidBlockHeight } =
       await connection.getLatestBlockhash();
