@@ -1,3 +1,4 @@
+import { WebSocket } from "ws";
 import { TransactionDetails } from "./TransactionDetails";
 
 export interface Session {
@@ -5,4 +6,5 @@ export interface Session {
   expired: boolean;
   timer?: NodeJS.Timeout;
   transactionDetails?: TransactionDetails;
+  merchantSocket?: WebSocket;
 }

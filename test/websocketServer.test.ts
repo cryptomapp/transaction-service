@@ -3,17 +3,11 @@ import { config } from "../src/config";
 import { startServer } from "../src/websocketServer";
 import { TransactionDetails } from "../src/models/TransactionDetails";
 
-jest.mock("../src/utils/QRCodeGenerator", () => ({
-  generateQRCode: jest.fn(() =>
-    Promise.resolve("data:image/png;base64,mockQRCodeData")
-  ),
-}));
-
 const PORT = config.port;
 let websocketUrl = `ws://localhost:${PORT}`;
 let sharedSessionId: string;
 
-describe.skip("WebSocket Server", () => {
+describe("WebSocket Server", () => {
   let server: WebSocket.Server | undefined;
 
   beforeAll(async () => {
@@ -51,7 +45,6 @@ describe.skip("WebSocket Server", () => {
       client.send(
         JSON.stringify({
           action: "createSession",
-          merchantId,
           transactionDetails,
         })
       );

@@ -1,4 +1,4 @@
-import { Server } from "ws";
+import { Server, WebSocket } from "ws";
 import { config } from "./config";
 import { v4 as uuidv4 } from "uuid";
 import { TransactionDetails } from "./models/TransactionDetails";
@@ -29,7 +29,7 @@ export const startServer = (port: number): Promise<Server> => {
           if (data.action === "createSession") {
             const sessionId = uuidv4();
             const { transactionDetails } = data;
-            createSessionWithTimeout(sessionId, transactionDetails);
+            createSessionWithTimeout(sessionId, transactionDetails, ws);
             ws.send(
               JSON.stringify({
                 status: "success",
@@ -167,10 +167,16 @@ export const startServer = (port: number): Promise<Server> => {
 
 export const createSessionWithTimeout = (
   sessionId: string,
-  transactionDetails: TransactionDetails
+  transactionDetails: TransactionDetails,
+  merchantWs: WebSocket
 ) => {
   if (!sessions[sessionId] || sessions[sessionId].expired) {
-    sessions[sessionId] = { joined: false, expired: false, transactionDetails };
+    sessions[sessionId] = {
+      joined: false,
+      expired: false,
+      transactionDetails,
+      merchantSocket: merchantWs,
+    };
     sessions[sessionId].timer = setTimeout(() => {
       sessions[sessionId].expired = true;
       console.log(`Session ${sessionId} expired due to inactivity.`);

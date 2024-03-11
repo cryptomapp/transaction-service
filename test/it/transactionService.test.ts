@@ -72,7 +72,7 @@ describe("Transaction Service Integration Tests", () => {
     }
   });
 
-  it("POSSITIVE: Merchant receives 1 USDC from Client gasless", async () => {
+  it("POSITIVE: Merchant requests execution of transaction from Client gasless", async () => {
     // 1. Merchant initiate a session with requested amount and receives sessionId.
     // UX: Merchant generates QR code.
     merchantWsClient = new WebSocket(websocketUrl);
@@ -89,11 +89,12 @@ describe("Transaction Service Integration Tests", () => {
       merchantWsClient.send(
         JSON.stringify({
           action: "createSession",
-          merchantId,
           transactionDetails,
         })
       );
     });
+
+    console.log("Merchant creates a session.");
 
     merchantWsClient.on("message", (message) => {
       const data = JSON.parse(message.toString());
@@ -103,7 +104,12 @@ describe("Transaction Service Integration Tests", () => {
       }
     });
 
+    console.log("Session created succesfully.");
+
     // TODO: not sure if Merchant is in the room
+    /*
+    No it isn't. Need to close this connection and jump into session.
+     */
 
     // 2. Client joins the session and fetch transaction data.
     // UX: Client scans QR code.
@@ -150,59 +156,5 @@ describe("Transaction Service Integration Tests", () => {
     // 4. Server receives, deserialize and validate the transaction.
     // 5. Server sign transaction with ServiceWallet and send it on-chain.
     // 6. Server receives response from Solana and notify Client and Merchant.
-  });
-
-  it.skip("Client submits a transaction to the server, and the server processes it", async () => {
-    // Fetch the latest blockhash
-    const { blockhash, lastValidBlockHeight } =
-      await connection.getLatestBlockhash();
-
-    // Assume client creates a transaction to pay the merchant
-    const transaction = new Transaction({
-      feePayer: clientKeypair.publicKey,
-      recentBlockhash: blockhash,
-    }).add(
-      SystemProgram.transfer({
-        fromPubkey: clientKeypair.publicKey,
-        toPubkey: merchantKeypair.publicKey,
-        lamports: 50000, // For example, 0.00005 SOL
-      })
-    );
-
-    // Client signs the transaction
-    transaction.sign(clientKeypair);
-
-    // Serialize the transaction for submission to the server
-    const serializedTransaction = transaction.serialize();
-
-    // Simulate server processing
-    // For this example, assume validateTransaction deserializes, validates, and submits the transaction
-    const signature = await connection.sendRawTransaction(
-      serializedTransaction,
-      { skipPreflight: true }
-    );
-
-    // Construct the strategy object for confirming the transaction
-    const confirmationStrategy = {
-      signature,
-      blockhash,
-      lastValidBlockHeight,
-    };
-
-    // Confirm the transaction
-    const confirmation = await connection.confirmTransaction(
-      confirmationStrategy,
-      "confirmed"
-    );
-
-    // Check the transaction was successful
-    expect(confirmation.value.err).toBeNull();
-
-    // Optionally, verify the merchant's balance increased
-    const newMerchantBalance = await connection.getBalance(
-      merchantKeypair.publicKey
-    );
-    const initialMerchantBalance = 0; // Replace with the initial balance, if available
-    expect(newMerchantBalance).toBeGreaterThan(initialMerchantBalance);
   });
 });
