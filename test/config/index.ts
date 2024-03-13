@@ -9,6 +9,9 @@ export const config = {
   merchantUsdcAccountAddress:
     process.env.MERCHANT_USDC_ACCOUNT_ADDRESS ||
     "BbbTVDRijRH6nPDN4gE72Gv3v58icNzpZW6UPb48738r",
+  clientUsdcAccountAddress:
+    process.env.CLIENT_USDC_ACCOUNT_ADDRESS ||
+    "fdS4cGhNkHEsU97P4BxZUvAdZYjxCQsqTb267jNDEDs",
   daoUsdcAccountAddress:
     process.env.DAO_USDC_ACCOUNT_ADDRESS ||
     "Ct7dhi3P7sie3Rm989m5LNt6cHrKNsoudwwbREtC5DPy",

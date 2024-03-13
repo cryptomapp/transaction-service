@@ -1,3 +1,5 @@
+import * as anchor from "@coral-xyz/anchor";
+import { CryptoMapp } from "../../idl/crypto_mapp";
 import {
   Connection,
   Keypair,
@@ -15,6 +17,7 @@ import {
   serviceWalletKeypair,
 } from "../config";
 import { TransactionDetails } from "../../src/models/TransactionDetails";
+import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 describe("Transaction Service Integration Tests", () => {
   // Solana
@@ -29,6 +32,11 @@ describe("Transaction Service Integration Tests", () => {
   const merchantUsdcAccount = config.merchantUsdcAccountAddress;
   const daoUsdcAccount = config.daoUsdcAccountAddress;
   const stateAccount = config.stateAddress;
+
+  const clientPublicKey = clientKeypair.publicKey;
+  const clientUsdcAccount = config.clientUsdcAccountAddress;
+
+  const transactionServiceWallet = serviceWalletKeypair;
 
   // Server
   const PORT = config.port;
@@ -143,6 +151,46 @@ describe("Transaction Service Integration Tests", () => {
     });
 
     // 3. Client build a transaction, sign it, serialize and submit to the server.
+
+    // Prepare program using Anchor
+    const provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    const program = anchor.workspace.CryptoMapp as anchor.Program<CryptoMapp>;
+
+    // Create executeTransactionInstruction
+    const executeTransactionInstruction = await program.methods
+      .executeTransaction(new anchor.BN(transactionAmount))
+      .accounts({
+        sender: clientPublicKey,
+        senderUsdcAccount: clientUsdcAccount,
+        receiverUsdcAccount: merchantUsdcAccount,
+        daoUsdcAccount: daoUsdcAccount,
+        state: stateAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
+
+    const transaction = new anchor.web3.Transaction();
+
+    const { blockhash } = await provider.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = serviceWalletKeypair.publicKey;
+
+    transaction.add(executeTransactionInstruction);
+    transaction.sign(clientKeypair);
+
+    const transactionSignature = transaction.serialize().toJSON;
+
+    clientWsClient.on("open", () => {
+      clientWsClient.send(
+        JSON.stringify({
+          action: "submitTransaction",
+          sessionId: sessionId,
+          transactionSignature: transactionSignature,
+        })
+      );
+    });
+
     // 4. Server receives, deserialize and validate the transaction.
     // 5. Server sign transaction with ServiceWallet and send it on-chain.
     // 6. Server receives response from Solana and notify Client and Merchant.
