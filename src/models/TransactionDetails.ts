@@ -3,29 +3,28 @@
  */
 export type TransactionDetails = {
   /**
-   * Transaction amount in smallest currency unit (e.g., cents for USD).
-   * For USDC, this represents the amount in the smallest unit,
-   * where 100_000_000 represents 100 USDC.
+   * Transaction amount in smallest currency unit (USDC).
+   * 100_000_000 represents 100 USDC.
    */
   amount: number;
 
   /**
-   * The unique identifier for the merchant involved in the transaction.
+   * MerchantId NFT
    */
   merchantId: string;
 
   /**
-   * The USDC account address of the receiver in the transaction.
+   * The USDC account address of the Merchant in the transaction.
    */
-  receiverUsdcAccount: string;
+  merchantUsdcAccount: string;
 
   /**
-   * The USDC account address for the DAO involved in the transaction.
+   * The USDC account address for the DAO Treasury involved in the transaction.
    */
   daoUsdcAccount: string;
 
   /**
-   * The state account used in the transaction.
+   * The CryptoMapp State account used in the transaction.
    */
   stateAccount: string;
 };

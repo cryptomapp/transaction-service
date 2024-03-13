@@ -6,6 +6,14 @@ export const config = {
   cryptoMappProgramId:
     process.env.PROGRAM_ADDRESS ||
     "8mDhNcko1rByfWLzVTuddx386JFwFnD3oDPWV2pzBckN",
+  merchantUsdcAccountAddress:
+    process.env.MERCHANT_USDC_ACCOUNT_ADDRESS ||
+    "BbbTVDRijRH6nPDN4gE72Gv3v58icNzpZW6UPb48738r",
+  daoUsdcAccountAddress:
+    process.env.DAO_USDC_ACCOUNT_ADDRESS ||
+    "Ct7dhi3P7sie3Rm989m5LNt6cHrKNsoudwwbREtC5DPy",
+  stateAddress:
+    process.env.STATE_ADDRESS || "5HzkGM1XFoVrrPLjanQ7Le1Aa4iHPf3aivfKLUztmwFn",
   port: process.env.PORT || 8080,
   timeout: 60000, // 60s
 };
@@ -21,10 +29,10 @@ export const clientKeypair = Keypair.fromSecretKey(
 );
 
 const merchantPrivateKey = [
-  8, 50, 212, 107, 172, 95, 82, 179, 102, 92, 240, 6, 170, 20, 194, 175, 49,
-  121, 236, 87, 132, 128, 132, 12, 236, 134, 52, 172, 98, 56, 23, 23, 225, 157,
-  74, 223, 167, 101, 99, 147, 243, 16, 186, 142, 120, 19, 240, 178, 54, 18, 142,
-  186, 2, 117, 74, 230, 246, 108, 154, 235, 218, 82, 181, 52,
+  172, 253, 36, 115, 141, 150, 184, 93, 220, 191, 111, 99, 206, 204, 50, 225,
+  169, 123, 254, 64, 125, 75, 143, 26, 122, 88, 248, 64, 39, 105, 165, 11, 39,
+  16, 247, 121, 224, 240, 12, 171, 10, 137, 241, 181, 103, 62, 181, 88, 14, 89,
+  135, 233, 196, 197, 129, 171, 186, 238, 121, 54, 231, 211, 144, 97,
 ];
 export const merchantKeypair = Keypair.fromSecretKey(
   new Uint8Array(merchantPrivateKey)

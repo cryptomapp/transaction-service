@@ -25,11 +25,10 @@ describe("Transaction Service Integration Tests", () => {
   console.log("Connected to Solana");
 
   const transactionAmount = 1_000_000; // 1 USDC
-
-  let merchantId: string;
-  let merchantUsdcAccount: string;
-  let daoUsdcAccount: string;
-  let stateUsdcAccount: string;
+  const merchantId = "7"; // MerchantID #7
+  const merchantUsdcAccount = config.merchantUsdcAccountAddress;
+  const daoUsdcAccount = config.daoUsdcAccountAddress;
+  const stateAccount = config.stateAddress;
 
   // Server
   const PORT = config.port;
@@ -73,16 +72,16 @@ describe("Transaction Service Integration Tests", () => {
   });
 
   it("POSITIVE: Merchant requests execution of transaction from Client gasless", async () => {
-    // 1. Merchant initiate a session with requested amount and receives sessionId.
+    // 1. Merchant initiate a session with transaction details, requested amount, generates sessionId.
     // UX: Merchant generates QR code.
     merchantWsClient = new WebSocket(websocketUrl);
 
     const transactionDetails: TransactionDetails = {
       amount: transactionAmount,
       merchantId: merchantId,
-      receiverUsdcAccount: merchantUsdcAccount,
+      merchantUsdcAccount: merchantUsdcAccount,
       daoUsdcAccount: daoUsdcAccount,
-      stateAccount: stateUsdcAccount,
+      stateAccount: stateAccount,
     };
 
     merchantWsClient.on("open", () => {
@@ -94,8 +93,6 @@ describe("Transaction Service Integration Tests", () => {
       );
     });
 
-    console.log("Merchant creates a session.");
-
     merchantWsClient.on("message", (message) => {
       const data = JSON.parse(message.toString());
       if (data.status === "success" && data.action === "sessionCreated") {
@@ -103,13 +100,6 @@ describe("Transaction Service Integration Tests", () => {
         sessionId = data.sessionId;
       }
     });
-
-    console.log("Session created succesfully.");
-
-    // TODO: not sure if Merchant is in the room
-    /*
-    No it isn't. Need to close this connection and jump into session.
-     */
 
     // 2. Client joins the session and fetch transaction data.
     // UX: Client scans QR code.
@@ -148,7 +138,7 @@ describe("Transaction Service Integration Tests", () => {
         expect(data.details.merchantId).toEqual(merchantId);
         expect(data.details.receiverUsdcAccount).toEqual(merchantUsdcAccount);
         expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
-        expect(data.details.stateAccount).toEqual(stateUsdcAccount);
+        expect(data.details.stateAccount).toEqual(stateAccount);
       }
     });
 
