@@ -131,85 +131,82 @@ describe("Transaction Service Integration Tests", () => {
 
     // 2. Client joins the session and fetch transaction data.
     // UX: Client scans QR code.
-    // clientWsClient = new WebSocket(`${websocketUrl}/${sessionId}`);
+    clientWsClient = new WebSocket(`${websocketUrl}/${sessionId}`);
+    clientWsClient.on("open", () => {
+      clientWsClient.send(
+        JSON.stringify({
+          action: "joinSession",
+          sessionId: sessionId,
+        })
+      );
+    });
 
-    // clientWsClient.on("open", () => {
-    //   clientWsClient.send(
-    //     JSON.stringify({
-    //       action: "joinSession",
-    //       sessionId: sessionId,
-    //     })
-    //   );
-    // });
+    clientWsClient.on("message", (message) => {
+      const data = JSON.parse(message.toString());
 
-    // clientWsClient.on("message", (message) => {
-    //   const data = JSON.parse(message.toString());
-    //   if (data.status === "success" && data.action === "joinedSession") {
-    //     expect(data.sessionId).toEqual(sessionId);
-    //   }
-    // });
+      // Handle the joinedSession response
+      if (data.status === "success") {
+        if (data.action === "joinedSession") {
+          expect(data.sessionId).toEqual(sessionId);
 
-    // clientWsClient.on("open", () => {
-    //   clientWsClient.send(
-    //     JSON.stringify({
-    //       action: "requestTransactionDetails",
-    //       sessionId: sessionId,
-    //     })
-    //   );
-    // });
+          // After successfully joining the session, request the transaction details.
+          clientWsClient.send(
+            JSON.stringify({
+              action: "requestTransactionDetails",
+              sessionId: sessionId,
+            })
+          );
+        } else if (data.action === "transactionDetails") {
+          // Handle the transaction details response
+          expect(data.details).toBeDefined();
+          expect(data.details.amount).toEqual(transactionAmount);
+          expect(data.details.merchantId).toEqual(merchantId);
+          expect(data.details.receiverUsdcAccount).toEqual(merchantUsdcAccount);
+          expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
+          expect(data.details.stateAccount).toEqual(stateAccount);
+        }
+      }
+    });
 
-    // clientWsClient.on("message", (message) => {
-    //   const data = JSON.parse(message.toString());
-    //   if (data.status === "success" && data.action === "transactionDetails") {
-    //     expect(data.details).toBeDefined();
-    //     expect(data.details.amount).toEqual(transactionAmount);
-    //     expect(data.details.merchantId).toEqual(merchantId);
-    //     expect(data.details.receiverUsdcAccount).toEqual(merchantUsdcAccount);
-    //     expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
-    //     expect(data.details.stateAccount).toEqual(stateAccount);
-    //   }
-    // });
+    // 3. Client build a transaction, sign it, serialize and submit to the server.
+    // Prepare program using Anchor
+    const provider = anchor.AnchorProvider.env();
+    anchor.setProvider(provider);
+    const program = anchor.workspace.CryptoMapp as anchor.Program<CryptoMapp>;
 
-    // // 3. Client build a transaction, sign it, serialize and submit to the server.
+    // Create executeTransactionInstruction
+    const executeTransactionInstruction = await program.methods
+      .executeTransaction(new anchor.BN(transactionAmount))
+      .accounts({
+        sender: clientPublicKey,
+        senderUsdcAccount: clientUsdcAccount,
+        receiverUsdcAccount: merchantUsdcAccount,
+        daoUsdcAccount: daoUsdcAccount,
+        state: stateAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .instruction();
 
-    // // Prepare program using Anchor
-    // const provider = anchor.AnchorProvider.env();
-    // anchor.setProvider(provider);
-    // const program = anchor.workspace.CryptoMapp as anchor.Program<CryptoMapp>;
+    const transaction = new anchor.web3.Transaction();
 
-    // // Create executeTransactionInstruction
-    // const executeTransactionInstruction = await program.methods
-    //   .executeTransaction(new anchor.BN(transactionAmount))
-    //   .accounts({
-    //     sender: clientPublicKey,
-    //     senderUsdcAccount: clientUsdcAccount,
-    //     receiverUsdcAccount: merchantUsdcAccount,
-    //     daoUsdcAccount: daoUsdcAccount,
-    //     state: stateAccount,
-    //     tokenProgram: TOKEN_PROGRAM_ID,
-    //   })
-    //   .instruction();
+    const { blockhash } = await provider.connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+    transaction.feePayer = serviceWalletKeypair.publicKey;
 
-    // const transaction = new anchor.web3.Transaction();
+    transaction.add(executeTransactionInstruction);
+    transaction.sign(clientKeypair);
 
-    // const { blockhash } = await provider.connection.getLatestBlockhash();
-    // transaction.recentBlockhash = blockhash;
-    // transaction.feePayer = serviceWalletKeypair.publicKey;
+    const transactionSignature = transaction.serialize().toJSON;
 
-    // transaction.add(executeTransactionInstruction);
-    // transaction.sign(clientKeypair);
-
-    // const transactionSignature = transaction.serialize().toJSON;
-
-    // clientWsClient.on("open", () => {
-    //   clientWsClient.send(
-    //     JSON.stringify({
-    //       action: "submitTransaction",
-    //       sessionId: sessionId,
-    //       transactionSignature: transactionSignature,
-    //     })
-    //   );
-    // });
+    clientWsClient.on("open", () => {
+      clientWsClient.send(
+        JSON.stringify({
+          action: "submitTransaction",
+          sessionId: sessionId,
+          transactionSignature: transactionSignature,
+        })
+      );
+    });
 
     // 4. Server receives, deserialize and validate the transaction.
     // 5. Server sign transaction with ServiceWallet and send it on-chain.
