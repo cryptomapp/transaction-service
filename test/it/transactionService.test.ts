@@ -172,6 +172,7 @@ describe("Transaction Service Integration Tests", () => {
     // Prepare program using Anchor
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
+    console.log("hola");
     const program = anchor.workspace.CryptoMapp as anchor.Program<CryptoMapp>;
 
     // Create executeTransactionInstruction

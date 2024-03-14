@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "jest"
+    "test": "ANCHOR_PROVIDER_URL=https://api.devnet.solana.com ANCHOR_WALLET=/Users/twentone37/CryptoMapp/cryptomapp-backend/transaction-service/test/it/resources/client_wallet.json jest"
   },
   "devDependencies": {
     "@swc/core": "^1.4.0",

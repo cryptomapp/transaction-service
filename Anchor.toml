@@ -1,0 +1,26 @@
+[toolchain]
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+crypto_mapp = "8mDhNcko1rByfWLzVTuddx386JFwFnD3oDPWV2pzBckN"
+
+[programs.devnet]
+crypto_mapp = "8mDhNcko1rByfWLzVTuddx386JFwFnD3oDPWV2pzBckN"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "https://api.devnet.solana.com"
+wallet = "/Users/twentone37/my-solana-wallet.json"
+
+#[provider]
+#cluster = "localnet"                   
+#wallet = "~/.config/solana/id.json"    
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
