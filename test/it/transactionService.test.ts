@@ -18,6 +18,8 @@ import {
 } from "../config";
 import { TransactionDetails } from "../../src/models/TransactionDetails";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import bs58 from "bs58";
+import nacl from "tweetnacl";
 
 describe("Transaction Service Integration Tests", () => {
   // Solana
@@ -54,6 +56,43 @@ describe("Transaction Service Integration Tests", () => {
     }
   }
 
+  function createSessionAndGetSessionId(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const merchantWsClient = new WebSocket(websocketUrl);
+
+      merchantWsClient.on("open", () => {
+        console.log("Merchant WebSocket connection opened.");
+        merchantWsClient.send(
+          JSON.stringify({
+            action: "createSession",
+            transactionDetails: {
+              amount: transactionAmount,
+              merchantId: merchantId,
+              merchantUsdcAccount: merchantUsdcAccount,
+              daoUsdcAccount: daoUsdcAccount,
+              stateAccount: stateAccount,
+            },
+          })
+        );
+      });
+
+      merchantWsClient.on("message", (message) => {
+        const data = JSON.parse(message.toString());
+        if (data.status === "success" && data.action === "sessionCreated") {
+          console.log("Session created successfully:", data.sessionId);
+          resolve(data.sessionId);
+        } else {
+          reject(new Error("Failed to create session"));
+        }
+      });
+
+      merchantWsClient.on("error", (error) => {
+        console.error("WebSocket error:", error);
+        reject(error);
+      });
+    });
+  }
+
   beforeAll(async () => {
     // Check balances and airdrop if necessary
     await airdropIfEmpty(serviceWalletKeypair.publicKey);
@@ -83,54 +122,17 @@ describe("Transaction Service Integration Tests", () => {
     // 1. Merchant initiate a session with transaction details, requested amount, generates sessionId.
     // UX: Merchant generates QR code.
 
-    const transactionDetails: TransactionDetails = {
-      amount: transactionAmount,
-      merchantId: merchantId,
-      merchantUsdcAccount: merchantUsdcAccount,
-      daoUsdcAccount: daoUsdcAccount,
-      stateAccount: stateAccount,
-    };
-
-    merchantWsClient = new WebSocket(websocketUrl);
-
-    merchantWsClient.on("open", () => {
-      // Connection is open, now send the message to create a session
-      console.log("Merchant WebSocket connection opened.");
-
-      merchantWsClient.send(
-        JSON.stringify({
-          action: "createSession",
-          transactionDetails,
-        })
-      );
-    });
-
-    merchantWsClient.on("message", (message) => {
-      // Parse the incoming message
-      const data = JSON.parse(message.toString());
-
-      console.log("message: ", data);
-
-      // Check if the session creation was successful
-      if (data.status === "success" && data.action === "sessionCreated") {
-        console.log("Session created successfully:", data.sessionId);
-        // Save or process the sessionId as needed, e.g., generate a QR code
-        const sessionId = data.sessionId;
-      } else {
-        console.error("Failed to create session:", data);
-      }
-    });
-
-    merchantWsClient.on("error", (error) => {
-      console.error("WebSocket error:", error);
-    });
-
-    merchantWsClient.on("close", (code, reason) => {
-      console.log(`WebSocket closed: ${code}, ${reason}`);
-    });
+    try {
+      sessionId = await createSessionAndGetSessionId();
+      console.log("Session ID:", sessionId);
+      // Proceed with using sessionId for the client to join the session and fetch transaction data...
+    } catch (error) {
+      console.error("Error in session creation:", error);
+    }
 
     // 2. Client joins the session and fetch transaction data.
     // UX: Client scans QR code.
+    console.log("sesssionId", sessionId);
     clientWsClient = new WebSocket(`${websocketUrl}/${sessionId}`);
     clientWsClient.on("open", () => {
       clientWsClient.send(
@@ -172,7 +174,6 @@ describe("Transaction Service Integration Tests", () => {
     // Prepare program using Anchor
     const provider = anchor.AnchorProvider.env();
     anchor.setProvider(provider);
-    console.log("hola");
     const program = anchor.workspace.CryptoMapp as anchor.Program<CryptoMapp>;
 
     // Create executeTransactionInstruction
@@ -194,20 +195,36 @@ describe("Transaction Service Integration Tests", () => {
     transaction.recentBlockhash = blockhash;
     transaction.feePayer = serviceWalletKeypair.publicKey;
 
+    console.log("Signing by: ", clientKeypair.publicKey);
+
     transaction.add(executeTransactionInstruction);
-    transaction.sign(clientKeypair);
 
-    const transactionSignature = transaction.serialize().toJSON;
+    // After adding the instruction but before signing
+    const message = transaction.compileMessage();
 
-    clientWsClient.on("open", () => {
-      clientWsClient.send(
-        JSON.stringify({
-          action: "submitTransaction",
-          sessionId: sessionId,
-          transactionSignature: transactionSignature,
-        })
-      );
-    });
+    // Sign the message using the client's keypair
+    const clientSignature = nacl.sign.detached(
+      message.serialize(),
+      clientKeypair.secretKey
+    );
+
+    // Convert the signature and public key to a string format (e.g., base58)
+    const signatureStr = bs58.encode(clientSignature);
+    const publicKeyStr = clientKeypair.publicKey.toString();
+
+    clientWsClient.send(
+      JSON.stringify({
+        action: "submitTransaction",
+        sessionId: sessionId,
+        signedTransactionDetails: {
+          message: bs58.encode(message.serialize()), // Serialized message
+          signature: signatureStr, // Client's signature
+          publicKey: publicKeyStr, // Client's public key
+        },
+      })
+    );
+
+    console.log("nice");
 
     // 4. Server receives, deserialize and validate the transaction.
     // 5. Server sign transaction with ServiceWallet and send it on-chain.

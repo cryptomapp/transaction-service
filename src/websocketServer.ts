@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import { TransactionDetails } from "./models/TransactionDetails";
 import { Session } from "./models/Session";
 import { SignedTransactionDetails } from "./models/SingedTransactionDetails";
+import { validateTransaction } from "./utils/transactionValidator";
 
 const timeout = config.timeout;
 const sessions: Record<string, Session> = {};
@@ -25,6 +26,8 @@ export const startServer = (port: number): Promise<Server> => {
       ws.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
+          console.log(data.action);
+          console.log(data.sessionId);
 
           if (data.action === "createSession") {
             const sessionId = uuidv4();
@@ -63,10 +66,12 @@ export const startServer = (port: number): Promise<Server> => {
           }
 
           if (
-            data.action === "joinSession" &&
-            sessions[sessionId] &&
-            !sessions[sessionId].expired
+            data.action === "joinSession"
+            // &&
+            // sessions[sessionId] &&
+            // !sessions[sessionId].expired
           ) {
+            console.log("aloha");
             sessions[sessionId].joined = true;
             clearTimeout(sessions[sessionId].timer);
             ws.send(
@@ -100,60 +105,35 @@ export const startServer = (port: number): Promise<Server> => {
             return;
           }
 
-          // if (data.action === "submitTransaction") {
-          //   const sessionId = data.sessionId;
-          //   const signedTransactionDetails: SignedTransactionDetails =
-          //     data.transaction;
+          if (data.action === "submitTransaction") {
+            console.log("hello");
+            const signedDetails: SignedTransactionDetails =
+              data.signedTransactionDetails;
 
-          //   try {
-          //     const isValidSignature = await verifyClientSignature(
-          //       signedTransactionDetails
-          //     ); // no longer valid, use transactionValidator
+            console.log("signedDetails", signedDetails);
 
-          //     if (!isValidSignature) {
-          //       ws.send(
-          //         JSON.stringify({
-          //           status: "error",
-          //           error: "Invalid signature",
-          //         })
-          //       );
-          //       return;
-          //     }
+            // Validate the client's signature
+            const isValid = await validateTransaction(signedDetails);
 
-          //     // Signature is valid, and session is valid and not expired
-          //     if (sessions[sessionId] && !sessions[sessionId].expired) {
-          //       // Implement logic to involve the service wallet here
-
-          //       // Send a success message back to the client
-          //       ws.send(
-          //         JSON.stringify({
-          //           status: "success",
-          //           action: "transactionSubmitted",
-          //           result: "Transaction processed successfully",
-          //           signatureVerified: true, // Placeholder
-          //           transactionStatus: "success", // This is a placeholder; adjust according to your actual logic
-          //         })
-          //       );
-          //     } else {
-          //       // Session is invalid or expired
-          //       ws.send(
-          //         JSON.stringify({
-          //           status: "error",
-          //           error: "Invalid or expired session",
-          //         })
-          //       );
-          //     }
-          //   } catch (error) {
-          //     console.error("Failed to verify signature:", error);
-          //     ws.send(
-          //       JSON.stringify({
-          //         status: "error",
-          //         error: "Signature verification failed",
-          //       })
-          //     );
-          //   }
-          //   return;
-          // }
+            if (isValid) {
+              // Optional: Sign with the service wallet and submit to blockchain
+              // Respond to client
+              ws.send(
+                JSON.stringify({
+                  status: "success",
+                  message: "Transaction processed",
+                })
+              );
+            } else {
+              ws.send(
+                JSON.stringify({
+                  status: "error",
+                  message: "Invalid signature",
+                })
+              );
+            }
+            return;
+          }
         } catch (error) {
           console.error("Error processing message:", error);
           ws.close(1002, "Protocol error");
