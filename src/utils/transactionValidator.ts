@@ -1,30 +1,30 @@
-import { PublicKey, Transaction, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 import bs58 from "bs58";
+import nacl from "tweetnacl";
 import { SignedTransactionDetails } from "../models/SingedTransactionDetails";
 
+// TODO: not sure if it really works xD
+
+// Function to verify the signature
 export async function validateTransaction(
   signedDetails: SignedTransactionDetails
-) {
-  console.log("inside");
-  const { clientSignature, clientPublicKey, transactionDetails } =
-    signedDetails;
+): Promise<boolean> {
+  const { message, signature, clientPublicKey } = signedDetails;
 
-  const payload = JSON.stringify(transactionDetails);
+  // Decode the message and signature from base58
+  const decodedMessage = bs58.decode(message);
+  const decodedSignature = bs58.decode(signature);
 
-  const publicKey = new PublicKey(clientPublicKey);
+  // Convert the client's public key from base58 and create a PublicKey object
+  const publicKeyBytes = bs58.decode(clientPublicKey);
+  const publicKey = new PublicKey(publicKeyBytes).toBytes();
 
-  // Decode the signature from base58
-  const decodedClientSignature = bs58.decode(clientSignature);
-
-  const isValidSignature = await verifySignature(
-    payload,
-    decodedClientSignature,
+  // Verify the signature
+  const isVerified = nacl.sign.detached.verify(
+    decodedMessage,
+    decodedSignature,
     publicKey
   );
 
-  return isValidSignature;
-}
-
-async function verifySignature(payload: any, signature: any, publicKey: any) {
-  return true;
+  return isVerified;
 }

@@ -132,7 +132,6 @@ describe("Transaction Service Integration Tests", () => {
 
     // 2. Client joins the session and fetch transaction data.
     // UX: Client scans QR code.
-    console.log("sesssionId", sessionId);
     clientWsClient = new WebSocket(`${websocketUrl}/${sessionId}`);
     clientWsClient.on("open", () => {
       clientWsClient.send(
@@ -163,7 +162,7 @@ describe("Transaction Service Integration Tests", () => {
           expect(data.details).toBeDefined();
           expect(data.details.amount).toEqual(transactionAmount);
           expect(data.details.merchantId).toEqual(merchantId);
-          expect(data.details.receiverUsdcAccount).toEqual(merchantUsdcAccount);
+          expect(data.details.merchantUsdcAccount).toEqual(merchantUsdcAccount);
           expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
           expect(data.details.stateAccount).toEqual(stateAccount);
         }
@@ -219,12 +218,10 @@ describe("Transaction Service Integration Tests", () => {
         signedTransactionDetails: {
           message: bs58.encode(message.serialize()), // Serialized message
           signature: signatureStr, // Client's signature
-          publicKey: publicKeyStr, // Client's public key
+          clientPublicKey: publicKeyStr, // Client's public key
         },
       })
     );
-
-    console.log("nice");
 
     // 4. Server receives, deserialize and validate the transaction.
     // 5. Server sign transaction with ServiceWallet and send it on-chain.

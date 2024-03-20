@@ -66,10 +66,9 @@ export const startServer = (port: number): Promise<Server> => {
           }
 
           if (
-            data.action === "joinSession"
-            // &&
-            // sessions[sessionId] &&
-            // !sessions[sessionId].expired
+            data.action === "joinSession" &&
+            sessions[sessionId] &&
+            !sessions[sessionId].expired
           ) {
             console.log("aloha");
             sessions[sessionId].joined = true;
@@ -106,9 +105,11 @@ export const startServer = (port: number): Promise<Server> => {
           }
 
           if (data.action === "submitTransaction") {
-            console.log("hello");
             const signedDetails: SignedTransactionDetails =
               data.signedTransactionDetails;
+
+            console.log("Inside submitTransaction");
+            console.log(data);
 
             console.log("signedDetails", signedDetails);
 
