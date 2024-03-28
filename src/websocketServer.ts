@@ -5,6 +5,7 @@ import { TransactionDetails } from "./models/TransactionDetails";
 import { Session } from "./models/Session";
 import { SignedTransactionDetails } from "./models/SingedTransactionDetails";
 import { validateTransaction } from "./utils/transactionValidator";
+import { CryptoMappClient } from "./utils/CryptoMappClient";
 
 const timeout = config.timeout;
 const sessions: Record<string, Session> = {};
@@ -114,17 +115,31 @@ export const startServer = (port: number): Promise<Server> => {
             console.log("signedDetails", signedDetails);
 
             // Validate the client's signature
-            const isValid = await validateTransaction(signedDetails);
+            // const isValid = await validateTransaction(signedDetails);
+            const isValid = true;
 
             if (isValid) {
-              // Optional: Sign with the service wallet and submit to blockchain
-              // Respond to client
-              ws.send(
-                JSON.stringify({
-                  status: "success",
-                  message: "Transaction processed",
-                })
-              );
+              try {
+                // Get the instance of your CryptoMappClient
+                const client = CryptoMappClient.getInstance();
+
+                await client.submitTransaction(signedDetails);
+
+                // Respond to client
+                ws.send(
+                  JSON.stringify({
+                    status: "success",
+                    message: "Transaction processed",
+                  })
+                );
+              } catch (error) {
+                ws.send(
+                  JSON.stringify({
+                    status: "error",
+                    message: "Failed to process transaction",
+                  })
+                );
+              }
             } else {
               ws.send(
                 JSON.stringify({

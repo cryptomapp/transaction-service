@@ -188,37 +188,33 @@ describe("Transaction Service Integration Tests", () => {
       })
       .instruction();
 
-    const transaction = new anchor.web3.Transaction();
+    const transaction = new Transaction().add(executeTransactionInstruction);
 
-    const { blockhash } = await provider.connection.getLatestBlockhash();
-    transaction.recentBlockhash = blockhash;
-    transaction.feePayer = serviceWalletKeypair.publicKey;
-
-    console.log("Signing by: ", clientKeypair.publicKey);
-
-    transaction.add(executeTransactionInstruction);
-
-    // After adding the instruction but before signing
-    const message = transaction.compileMessage();
-
-    // Sign the message using the client's keypair
-    const clientSignature = nacl.sign.detached(
-      message.serialize(),
-      clientKeypair.secretKey
+    // Set the recent blockhash and fee payer (if not already set)
+    transaction.recentBlockhash = (
+      await connection.getLatestBlockhash()
+    ).blockhash;
+    transaction.feePayer = new PublicKey(
+      "HyZWBzi5EH9mm7FFhpAHQArm5JyY1KPeWgSxMN6YZdJy"
     );
 
-    // Convert the signature and public key to a string format (e.g., base58)
-    const signatureStr = bs58.encode(clientSignature);
-    const publicKeyStr = clientKeypair.publicKey.toString();
+    // Sign the transaction with the client's keypair
+    transaction.partialSign(clientKeypair);
+
+    // Serialize the fully signed transaction
+    const serializedTransaction = transaction.serialize({
+      requireAllSignatures: false,
+    });
+
+    // Encode the serialized transaction for sending
+    const encodedTransaction = bs58.encode(serializedTransaction);
 
     clientWsClient.send(
       JSON.stringify({
         action: "submitTransaction",
         sessionId: sessionId,
         signedTransactionDetails: {
-          message: bs58.encode(message.serialize()), // Serialized message
-          signature: signatureStr, // Client's signature
-          clientPublicKey: publicKeyStr, // Client's public key
+          message: encodedTransaction,
         },
       })
     );
