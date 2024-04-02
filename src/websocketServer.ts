@@ -71,8 +71,8 @@ export const startServer = (port: number): Promise<Server> => {
             sessions[sessionId] &&
             !sessions[sessionId].expired
           ) {
-            console.log("aloha");
             sessions[sessionId].joined = true;
+            sessions[sessionId].clientSocket = ws;
             clearTimeout(sessions[sessionId].timer);
             ws.send(
               JSON.stringify({
@@ -109,29 +109,29 @@ export const startServer = (port: number): Promise<Server> => {
             const signedDetails: SignedTransactionDetails =
               data.signedTransactionDetails;
 
-            console.log("Inside submitTransaction");
-            console.log(data);
-
-            console.log("signedDetails", signedDetails);
-
             // Validate the client's signature
             // const isValid = await validateTransaction(signedDetails);
             const isValid = true;
 
             if (isValid) {
               try {
-                // Get the instance of your CryptoMappClient
                 const client = CryptoMappClient.getInstance();
-
                 await client.submitTransaction(signedDetails);
 
-                // Respond to client
-                ws.send(
-                  JSON.stringify({
-                    status: "success",
-                    message: "Transaction processed",
-                  })
-                );
+                // Prepare the success message
+                const successMessage = JSON.stringify({
+                  status: "success",
+                  message: "Transaction processed",
+                });
+
+                // Send feedback to the merchant
+                const session = sessions[sessionId];
+                session.merchantSocket.send(successMessage);
+
+                // Check if the client has joined and send feedback to the client
+                if (session.clientSocket) {
+                  session.clientSocket.send(successMessage);
+                }
               } catch (error) {
                 ws.send(
                   JSON.stringify({

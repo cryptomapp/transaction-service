@@ -7,4 +7,5 @@ export interface Session {
   timer?: NodeJS.Timeout;
   transactionDetails?: TransactionDetails;
   merchantSocket?: WebSocket;
+  clientSocket?: WebSocket;
 }

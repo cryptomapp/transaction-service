@@ -2,24 +2,15 @@ import * as anchor from "@coral-xyz/anchor";
 import { CryptoMapp } from "../../idl/crypto_mapp";
 import {
   Connection,
-  Keypair,
   LAMPORTS_PER_SOL,
-  SystemProgram,
   Transaction,
   PublicKey,
 } from "@solana/web3.js";
 import WebSocket from "ws";
 import { startServer } from "../../src/websocketServer";
-import {
-  clientKeypair,
-  config,
-  merchantKeypair,
-  serviceWalletKeypair,
-} from "../config";
-import { TransactionDetails } from "../../src/models/TransactionDetails";
+import { clientKeypair, config, serviceWalletKeypair } from "../config";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import bs58 from "bs58";
-import nacl from "tweetnacl";
 
 describe("Transaction Service Integration Tests", () => {
   // Solana
@@ -38,8 +29,6 @@ describe("Transaction Service Integration Tests", () => {
   const clientPublicKey = clientKeypair.publicKey;
   const clientUsdcAccount = config.clientUsdcAccountAddress;
 
-  const transactionServiceWallet = serviceWalletKeypair;
-
   // Server
   const PORT = config.port;
   let server: WebSocket.Server | undefined;
@@ -56,9 +45,9 @@ describe("Transaction Service Integration Tests", () => {
     }
   }
 
-  function createSessionAndGetSessionId(): Promise<string> {
+  async function createSessionAndGetSessionId(): Promise<string> {
     return new Promise((resolve, reject) => {
-      const merchantWsClient = new WebSocket(websocketUrl);
+      merchantWsClient = new WebSocket(websocketUrl);
 
       merchantWsClient.on("open", () => {
         console.log("Merchant WebSocket connection opened.");
@@ -219,8 +208,36 @@ describe("Transaction Service Integration Tests", () => {
       })
     );
 
-    // 4. Server receives, deserialize and validate the transaction.
-    // 5. Server sign transaction with ServiceWallet and send it on-chain.
-    // 6. Server receives response from Solana and notify Client and Merchant.
+    // 4. Server receives response from Solana and notify Client and Merchant.
+    const merchantFeedbackPromise = new Promise((resolve, reject) => {
+      merchantWsClient.once("message", (data) => {
+        const response = JSON.parse(data.toString());
+        if (
+          response.status === "success" &&
+          response.message === "Transaction processed"
+        ) {
+          resolve("Merchant received success feedback");
+        } else {
+          reject(new Error("Merchant did not receive expected feedback"));
+        }
+      });
+    });
+
+    const clientFeedbackPromise = new Promise((resolve, reject) => {
+      clientWsClient.once("message", (data) => {
+        const response = JSON.parse(data.toString());
+        if (
+          response.status === "success" &&
+          response.message === "Transaction processed"
+        ) {
+          resolve("Client received success feedback");
+        } else {
+          reject(new Error("Client did not receive expected feedback"));
+        }
+      });
+    });
+
+    // Wait for both feedback promises to resolve, indicating that both the merchant and client received the correct feedback.
+    await Promise.all([merchantFeedbackPromise, clientFeedbackPromise]);
   });
 });
