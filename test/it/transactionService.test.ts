@@ -214,7 +214,8 @@ describe("Transaction Service Integration Tests", () => {
         const response = JSON.parse(data.toString());
         if (
           response.status === "success" &&
-          response.message === "Transaction processed"
+          response.message === "Transaction processed" &&
+          response.solscanUrl
         ) {
           resolve("Merchant received success feedback");
         } else {
@@ -228,7 +229,8 @@ describe("Transaction Service Integration Tests", () => {
         const response = JSON.parse(data.toString());
         if (
           response.status === "success" &&
-          response.message === "Transaction processed"
+          response.message === "Transaction processed" &&
+          response.solscanUrl
         ) {
           resolve("Client received success feedback");
         } else {

@@ -28,7 +28,7 @@ export class CryptoMappClient {
 
   async submitTransaction(
     signedDetails: SignedTransactionDetails
-  ): Promise<void> {
+  ): Promise<string> {
     try {
       // Decode the base58-encoded signed transaction message received from the client
       const serializedTransaction = bs58.decode(signedDetails.message);
@@ -36,12 +36,8 @@ export class CryptoMappClient {
       // Convert serialized transaction to Transaction object
       let transaction = Transaction.from(serializedTransaction);
 
-      console.log("signing with: ", this.serviceWallet.publicKey);
-
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
-
-      console.log("holaa1");
 
       // Ensure the transaction is fully signed
       if (!transaction.verifySignatures()) {
@@ -63,6 +59,12 @@ export class CryptoMappClient {
       // Wait for the transaction to be confirmed
       await this.connection.confirmTransaction(signature, "confirmed");
       console.log("Transaction confirmed with signature:", signature);
+
+      // Construct the Solscan URL
+      const solscanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
+      console.log("Solscan URL:", solscanUrl);
+
+      return signature;
     } catch (error) {
       console.error("Error submitting transaction:", error);
       throw error; // Re-throw the error for external handling if needed

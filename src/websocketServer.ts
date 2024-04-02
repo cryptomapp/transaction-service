@@ -116,12 +116,16 @@ export const startServer = (port: number): Promise<Server> => {
             if (isValid) {
               try {
                 const client = CryptoMappClient.getInstance();
-                await client.submitTransaction(signedDetails);
+                const signature = await client.submitTransaction(signedDetails);
+
+                // DEVNET
+                const solscanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
 
                 // Prepare the success message
                 const successMessage = JSON.stringify({
                   status: "success",
                   message: "Transaction processed",
+                  solscanUrl: solscanUrl,
                 });
 
                 // Send feedback to the merchant
