@@ -32,4 +32,4 @@ RUN yarn install --production
 
 EXPOSE 3000
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/src/app.js"]
