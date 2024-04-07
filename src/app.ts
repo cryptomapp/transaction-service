@@ -16,7 +16,7 @@ const wsPort = 3001; // WebSocket server port
 app.use(json());
 app.use(
   cors({
-    origin: "http://localhost:9000",
+    origin: ["http://localhost:9000", "https://cryptomapp.vercel.app"],
   })
 );
 
