@@ -6,6 +6,7 @@ import { Session } from "./models/Session";
 import { SignedTransactionDetails } from "./models/SingedTransactionDetails";
 import { validateTransaction } from "./utils/transactionValidator";
 import { CryptoMappClient } from "./utils/CryptoMappClient";
+import { ClientTransactionDetails } from "./models/ClientTransactionDetails";
 
 const timeout = config.timeout;
 const sessions: Record<string, Session> = {};
@@ -33,12 +34,19 @@ export const startServer = (port: number): Promise<Server> => {
           if (data.action === "createSession") {
             const sessionId = uuidv4();
             const { transactionDetails } = data;
-            createSessionWithTimeout(sessionId, transactionDetails, ws);
+            const { clientTransactionDetails } = data;
+            createSessionWithTimeout(
+              sessionId,
+              transactionDetails,
+              clientTransactionDetails,
+              ws
+            );
             ws.send(
               JSON.stringify({
                 status: "success",
                 action: "sessionCreated",
                 sessionId: sessionId,
+                clientTransactionDetails: clientTransactionDetails,
               })
             );
             return;
@@ -87,11 +95,14 @@ export const startServer = (port: number): Promise<Server> => {
             const sessionId = data.sessionId;
             if (sessions[sessionId] && !sessions[sessionId].expired) {
               const transactionDetails = sessions[sessionId].transactionDetails;
+              const clientTransactionDetails =
+                sessions[sessionId].clientTransactionDetails;
               ws.send(
                 JSON.stringify({
                   status: "success",
                   action: "transactionDetails",
                   details: transactionDetails,
+                  clientTransactionDetails: clientTransactionDetails,
                 })
               );
             } else {
@@ -188,6 +199,7 @@ export const startServer = (port: number): Promise<Server> => {
 export const createSessionWithTimeout = (
   sessionId: string,
   transactionDetails: TransactionDetails,
+  clientTransactionDetails: ClientTransactionDetails,
   merchantWs: WebSocket
 ) => {
   if (!sessions[sessionId] || sessions[sessionId].expired) {
@@ -195,6 +207,7 @@ export const createSessionWithTimeout = (
       joined: false,
       expired: false,
       transactionDetails,
+      clientTransactionDetails,
       merchantSocket: merchantWs,
     };
     sessions[sessionId].timer = setTimeout(() => {
