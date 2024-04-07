@@ -10,7 +10,7 @@ import cors from "cors";
 
 const app = express();
 const port = 3000; // HTTP server port
-const wsPort = 443; // WebSocket server port
+const wsPort = 8080; // WebSocket server port
 
 // Middleware
 app.use(json());
@@ -21,7 +21,7 @@ app.use(
 );
 
 app.get("/health", (req, res) => {
-  res.send("OK");
+  res.send("OK :)");
 });
 
 // POST endpoint for ARS to USDC conversion
