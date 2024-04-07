@@ -2,7 +2,10 @@ import express from "express";
 import { json } from "body-parser";
 import { Server as HttpServer } from "http";
 import { startServer as startWebSocketServer } from "./websocketServer";
-import { convertARStoUSDC } from "./utils/blueDollarConverter";
+import {
+  convertARStoUSDC,
+  convertUSDCToARS,
+} from "./utils/blueDollarConverter";
 import cors from "cors";
 
 const app = express();
@@ -18,7 +21,7 @@ app.use(
 );
 
 // POST endpoint for ARS to USDC conversion
-app.post("/convert", async (req, res) => {
+app.post("/convert-ars-to-usdc", async (req, res) => {
   try {
     const { arsAmount } = req.body;
     if (!arsAmount) {
@@ -26,6 +29,21 @@ app.post("/convert", async (req, res) => {
     }
     const usdcValue = await convertARStoUSDC(arsAmount);
     return res.json({ arsAmount, usdcValue });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ error: "Error converting currency" });
+  }
+});
+
+// POST endpoint for USDC to ARS conversion
+app.post("/convert-usdc-to-ars", async (req, res) => {
+  try {
+    const { usdcAmount } = req.body;
+    if (!usdcAmount) {
+      return res.status(400).send({ error: "USDC amount is required" });
+    }
+    const arsValue = await convertUSDCToARS(usdcAmount);
+    return res.json({ usdcAmount, arsValue });
   } catch (error) {
     console.error(error);
     return res.status(500).send({ error: "Error converting currency" });
