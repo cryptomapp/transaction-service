@@ -31,6 +31,6 @@ COPY yarn.lock ./
 RUN yarn install --production
 
 EXPOSE 3000
-EXPOSE 8080
+EXPOSE 443
 
 CMD ["node", "dist/src/app.js"]
