@@ -30,6 +30,7 @@ COPY yarn.lock ./
 # Install only production dependencies using Yarn
 RUN yarn install --production
 
-EXPOSE 3000-3001
+EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "dist/src/app.js"]
