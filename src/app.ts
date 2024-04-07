@@ -3,6 +3,7 @@ import { json } from "body-parser";
 import { Server as HttpServer } from "http";
 import { startServer as startWebSocketServer } from "./websocketServer";
 import { convertARStoUSDC } from "./utils/blueDollarConverter";
+import cors from "cors";
 
 const app = express();
 const port = 3000; // HTTP server port
@@ -10,6 +11,11 @@ const wsPort = 3001; // WebSocket server port
 
 // Middleware
 app.use(json());
+app.use(
+  cors({
+    origin: "http://localhost:9000",
+  })
+);
 
 // POST endpoint for ARS to USDC conversion
 app.post("/convert", async (req, res) => {

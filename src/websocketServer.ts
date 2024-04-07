@@ -106,6 +106,27 @@ export const startServer = (port: number): Promise<Server> => {
           }
 
           if (data.action === "submitTransaction") {
+            const session = sessions[sessionId];
+
+            const submitMessage = JSON.stringify({
+              status: "success",
+              message: "Transaction submitted",
+            });
+
+            await Promise.all([
+              session.merchantSocket
+                ? session.merchantSocket.send(submitMessage)
+                : null,
+              session.clientSocket
+                ? session.clientSocket.send(submitMessage)
+                : null,
+            ]).catch((error) => {
+              console.error(
+                "Failed to send confirmation message about transaction submission",
+                error
+              );
+            });
+
             const signedDetails: SignedTransactionDetails =
               data.signedTransactionDetails;
 
@@ -129,7 +150,6 @@ export const startServer = (port: number): Promise<Server> => {
                 });
 
                 // Send feedback to the merchant
-                const session = sessions[sessionId];
                 session.merchantSocket.send(successMessage);
 
                 // Check if the client has joined and send feedback to the client
