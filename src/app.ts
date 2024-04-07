@@ -20,6 +20,10 @@ app.use(
   })
 );
 
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
+
 // POST endpoint for ARS to USDC conversion
 app.post("/convert-ars-to-usdc", async (req, res) => {
   try {
