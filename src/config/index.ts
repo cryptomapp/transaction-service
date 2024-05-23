@@ -5,6 +5,7 @@ export const config = {
   cryptoMappProgramId:
     process.env.PROGRAM_ADDRESS ||
     "8mDhNcko1rByfWLzVTuddx386JFwFnD3oDPWV2pzBckN",
+  solanaProviderUrl: process.env.SOLANA_RPC || "https://api.devnet.solana.com",
   solPrivateKey:
     process.env.SERVICE_WALLET ||
     "4GVrk3J7GB8a29RqqBG6x9WZieDufp3ngPc6zcRH3JzfQN3WxLjMbgf98feTWdivSoXxM5EqpQQtzZzrAG6qJDMs",

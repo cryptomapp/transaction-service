@@ -28,8 +28,6 @@ export const startServer = (port: number): Promise<Server> => {
       ws.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
-          console.log(data.action);
-          console.log(data.sessionId);
 
           if (data.action === "createSession") {
             const sessionId = uuidv4();
@@ -151,7 +149,7 @@ export const startServer = (port: number): Promise<Server> => {
                 const signature = await client.submitTransaction(signedDetails);
 
                 // DEVNET
-                const solscanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
+                const solscanUrl = `https://solscan.io/tx/${signature}`;
 
                 // Prepare the success message
                 const successMessage = JSON.stringify({

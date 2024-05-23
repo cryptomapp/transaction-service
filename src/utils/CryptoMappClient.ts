@@ -1,4 +1,5 @@
 import {
+  ComputeBudgetProgram,
   Connection,
   Keypair,
   Transaction,
@@ -14,7 +15,7 @@ export class CryptoMappClient {
   private serviceWallet: Keypair;
 
   private constructor() {
-    this.connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+    this.connection = new Connection(config.solanaProviderUrl, "confirmed");
     const secretKeyUint8Array = bs58.decode(config.solPrivateKey);
     this.serviceWallet = Keypair.fromSecretKey(secretKeyUint8Array);
   }
@@ -35,6 +36,18 @@ export class CryptoMappClient {
 
       // Convert serialized transaction to Transaction object
       let transaction = Transaction.from(serializedTransaction);
+
+      // Add priority fee
+      const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
+        units: 100_000,
+      });
+
+      const addPriorityFee = ComputeBudgetProgram.setComputeUnitPrice({
+        microLamports: 10_000,
+      });
+
+      transaction.add(modifyComputeUnits);
+      transaction.add(addPriorityFee);
 
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
@@ -61,7 +74,7 @@ export class CryptoMappClient {
       console.log("Transaction confirmed with signature:", signature);
 
       // Construct the Solscan URL
-      const solscanUrl = `https://solscan.io/tx/${signature}?cluster=devnet`;
+      const solscanUrl = `https://solscan.io/tx/${signature}`;
       console.log("Solscan URL:", solscanUrl);
 
       return signature;

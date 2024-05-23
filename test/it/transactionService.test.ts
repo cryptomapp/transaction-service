@@ -12,7 +12,7 @@ import { clientKeypair, config, serviceWalletKeypair } from "../config";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import bs58 from "bs58";
 
-describe("Transaction Service Integration Tests", () => {
+describe.only("Transaction Service Integration Tests", () => {
   // Solana
   const connection = new Connection(
     "https://api.devnet.solana.com",
@@ -60,6 +60,14 @@ describe("Transaction Service Integration Tests", () => {
               merchantUsdcAccount: merchantUsdcAccount,
               daoUsdcAccount: daoUsdcAccount,
               stateAccount: stateAccount,
+            },
+            clientTransactionDetails: {
+              address: "address",
+              amount: "20000",
+              name: "name",
+              currency: "USDC",
+              city: "Buenos Aires",
+              date: "today",
             },
           })
         );
@@ -154,6 +162,9 @@ describe("Transaction Service Integration Tests", () => {
           expect(data.details.merchantUsdcAccount).toEqual(merchantUsdcAccount);
           expect(data.details.daoUsdcAccount).toEqual(daoUsdcAccount);
           expect(data.details.stateAccount).toEqual(stateAccount);
+
+          console.log("HERE");
+          console.log(data.details.clientTransactionDetails);
         }
       }
     });
