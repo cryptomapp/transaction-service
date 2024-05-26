@@ -49,8 +49,10 @@ export class CryptoMappClient {
       transaction.add(modifyComputeUnits);
       transaction.add(addPriorityFee);
 
+      console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
+      console.log("[submitTransaction] after partialSign");
 
       // Ensure the transaction is fully signed
       if (!transaction.verifySignatures()) {

@@ -31,6 +31,7 @@ export const startServer = (port: number): Promise<Server> => {
 
           if (data.action === "createSession") {
             const sessionId = uuidv4();
+            console.log("Created session: ", sessionId);
             const { transactionDetails } = data;
             const { clientTransactionDetails } = data;
             createSessionWithTimeout(
@@ -77,6 +78,7 @@ export const startServer = (port: number): Promise<Server> => {
             sessions[sessionId] &&
             !sessions[sessionId].expired
           ) {
+            console.log("Client joins session: ", sessionId);
             sessions[sessionId].joined = true;
             sessions[sessionId].clientSocket = ws;
             clearTimeout(sessions[sessionId].timer);
@@ -91,6 +93,7 @@ export const startServer = (port: number): Promise<Server> => {
 
           if (data.action === "requestTransactionDetails") {
             const sessionId = data.sessionId;
+            console.log("Requested transaction details, session: ", sessionId);
             if (sessions[sessionId] && !sessions[sessionId].expired) {
               const transactionDetails = sessions[sessionId].transactionDetails;
               const clientTransactionDetails =
@@ -116,6 +119,7 @@ export const startServer = (port: number): Promise<Server> => {
 
           if (data.action === "submitTransaction") {
             const session = sessions[sessionId];
+            console.log("Submitted transaction, session: ", sessionId);
 
             const submitMessage = JSON.stringify({
               status: "success",
@@ -145,8 +149,17 @@ export const startServer = (port: number): Promise<Server> => {
 
             if (isValid) {
               try {
+                console.log(
+                  "Validated transaction details: ",
+                  data.signedTransactionDetails
+                );
                 const client = CryptoMappClient.getInstance();
                 const signature = await client.submitTransaction(signedDetails);
+
+                console.log(
+                  "Submitted transaction with signature: ",
+                  signature
+                );
 
                 // DEVNET
                 const solscanUrl = `https://solscan.io/tx/${signature}`;
