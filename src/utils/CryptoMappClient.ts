@@ -61,6 +61,8 @@ export class CryptoMappClient {
         throw new Error("Signature verification failed.");
       }
 
+      console.log("Transaction verified");
+
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
 
