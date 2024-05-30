@@ -66,6 +66,7 @@ export class CryptoMappClient {
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
 
+      console.log("Before sendRawTransaction");
       // Submit the serialized transaction to the Solana blockchain
       const signature = await this.connection.sendRawTransaction(
         serializedVersionedTransaction,
@@ -74,6 +75,8 @@ export class CryptoMappClient {
           preflightCommitment: "confirmed",
         }
       );
+
+      console.log("Before confirmation");
 
       // Wait for the transaction to be confirmed
       await this.connection.confirmTransaction(signature, "confirmed");
