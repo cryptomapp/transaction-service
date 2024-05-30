@@ -37,6 +37,8 @@ export class CryptoMappClient {
       // Convert serialized transaction to Transaction object
       let transaction = Transaction.from(serializedTransaction);
 
+      console.log("transaction: ", transaction);
+
       // Add priority fee
       const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
         units: 100_000,

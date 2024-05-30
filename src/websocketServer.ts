@@ -40,6 +40,8 @@ export const startServer = (port: number): Promise<Server> => {
               clientTransactionDetails,
               ws
             );
+            console.log("transactionDetails", transactionDetails);
+            console.log("clientTransactionDetails", clientTransactionDetails);
             ws.send(
               JSON.stringify({
                 status: "success",
