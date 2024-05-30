@@ -57,11 +57,11 @@ export class CryptoMappClient {
       console.log("[submitTransaction] after partialSign");
 
       // Ensure the transaction is fully signed
-      if (!transaction.verifySignatures()) {
-        throw new Error("Signature verification failed.");
-      }
+      // if (!transaction.verifySignatures()) {
+      //   throw new Error("Signature verification failed.");
+      // }
 
-      console.log("Transaction verified");
+      // console.log("Transaction verified");
 
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
