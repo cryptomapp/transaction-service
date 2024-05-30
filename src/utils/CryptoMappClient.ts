@@ -73,6 +73,7 @@ export class CryptoMappClient {
         {
           skipPreflight: false,
           preflightCommitment: "confirmed",
+          maxRetries: 5,
         }
       );
 
