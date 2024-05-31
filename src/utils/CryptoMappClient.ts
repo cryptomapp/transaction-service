@@ -39,18 +39,6 @@ export class CryptoMappClient {
 
       console.log("transaction: ", transaction);
 
-      // Add priority fee
-      const modifyComputeUnits = ComputeBudgetProgram.setComputeUnitLimit({
-        units: 100_000,
-      });
-
-      const addPriorityFee = ComputeBudgetProgram.setComputeUnitPrice({
-        microLamports: 10_000,
-      });
-
-      // transaction.add(modifyComputeUnits);
-      // transaction.add(addPriorityFee);
-
       console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
@@ -73,7 +61,7 @@ export class CryptoMappClient {
       const signature = await this.connection.sendRawTransaction(
         serializedVersionedTransaction,
         {
-          skipPreflight: false,
+          skipPreflight: true,
           preflightCommitment: "confirmed",
           maxRetries: 5,
         }
