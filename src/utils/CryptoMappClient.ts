@@ -62,12 +62,20 @@ export class CryptoMappClient {
         serializedVersionedTransaction,
         {
           skipPreflight: false,
-          preflightCommitment: "finalized",
+          preflightCommitment: "confirmed",
           maxRetries: 5,
         }
       );
 
-      // console.log("Before confirmation");
+      const latestBlockHash = await this.connection.getLatestBlockhash();
+
+      console.log("Before confirmation");
+
+      await this.connection.confirmTransaction({
+        blockhash: latestBlockHash.blockhash,
+        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+        signature: signature,
+      });
 
       // Wait for the transaction to be confirmed
       // await this.connection.confirmTransaction(signature, "confirmed");
