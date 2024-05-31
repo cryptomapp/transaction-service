@@ -62,7 +62,7 @@ export class CryptoMappClient {
         serializedVersionedTransaction,
         {
           skipPreflight: false,
-          preflightCommitment: "confirmed",
+          preflightCommitment: "finalized",
           maxRetries: 5,
         }
       );
@@ -70,8 +70,8 @@ export class CryptoMappClient {
       // console.log("Before confirmation");
 
       // Wait for the transaction to be confirmed
-      await this.connection.confirmTransaction(signature, "confirmed");
-      console.log("Transaction confirmed with signature:", signature);
+      // await this.connection.confirmTransaction(signature, "confirmed");
+      // console.log("Transaction confirmed with signature:", signature);
 
       // Construct the Solscan URL
       const solscanUrl = `https://solscan.io/tx/${signature}`;
