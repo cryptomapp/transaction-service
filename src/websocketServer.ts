@@ -32,6 +32,8 @@ export const startServer = (port: number): Promise<Server> => {
           if (data.action === "createSession") {
             const sessionId = uuidv4();
             console.log("Created session: ", sessionId);
+            data.transactionDetails.daoUsdcAccount =
+              "AHUU7Q6eHFJBVLfzbec8xv45EcpwUpD93S3YtCp35tTZ";
             const { transactionDetails } = data;
             const { clientTransactionDetails } = data;
             createSessionWithTimeout(
