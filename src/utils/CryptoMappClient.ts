@@ -48,8 +48,8 @@ export class CryptoMappClient {
         microLamports: 10_000,
       });
 
-      transaction.add(modifyComputeUnits);
-      transaction.add(addPriorityFee);
+      // transaction.add(modifyComputeUnits);
+      // transaction.add(addPriorityFee);
 
       console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
@@ -57,9 +57,9 @@ export class CryptoMappClient {
       console.log("[submitTransaction] after partialSign");
 
       // Ensure the transaction is fully signed
-      // if (!transaction.verifySignatures()) {
-      //   throw new Error("Signature verification failed.");
-      // }
+      if (!transaction.verifySignatures()) {
+        throw new Error("Signature verification failed.");
+      }
 
       console.log("Before serialisation");
 
