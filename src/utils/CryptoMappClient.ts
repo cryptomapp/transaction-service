@@ -54,6 +54,8 @@ export class CryptoMappClient {
       console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
+
+      console.log("transaction: ", transaction);
       console.log("[submitTransaction] after partialSign");
 
       // Ensure the transaction is fully signed
