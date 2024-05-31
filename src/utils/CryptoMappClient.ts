@@ -48,8 +48,8 @@ export class CryptoMappClient {
         microLamports: 10_000,
       });
 
-      transaction.add(modifyComputeUnits);
-      transaction.add(addPriorityFee);
+      // transaction.add(modifyComputeUnits);
+      // transaction.add(addPriorityFee);
 
       console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
