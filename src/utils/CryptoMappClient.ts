@@ -69,7 +69,7 @@ export class CryptoMappClient {
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
 
-      const priorityFee = this.getPriorityFeeEstimate(
+      const priorityFee = await this.getPriorityFeeEstimate(
         "HIGH",
         serializedVersionedTransaction
       );
