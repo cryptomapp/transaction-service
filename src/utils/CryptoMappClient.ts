@@ -44,12 +44,7 @@ export class CryptoMappClient {
       }
     );
     const data = await response.json();
-    console.log(
-      "Fee in function for",
-      priorityLevel,
-      " :",
-      data.result.priorityFeeEstimate
-    );
+    console.log("Fee in function for", priorityLevel, " :", data.result);
     return data.result;
   }
 
