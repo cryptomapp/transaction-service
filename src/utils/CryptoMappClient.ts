@@ -9,10 +9,7 @@ export class CryptoMappClient {
   private serviceWallet: Keypair;
 
   private constructor() {
-    this.connection = new Connection(config.solanaProviderUrl, {
-      wsEndpoint: config.wsProviderUrl,
-      commitment: "confirmed",
-    });
+    this.connection = new Connection(config.solanaProviderUrl, "confirmed");
     const secretKeyUint8Array = bs58.decode(config.solPrivateKey);
     this.serviceWallet = Keypair.fromSecretKey(secretKeyUint8Array);
   }
