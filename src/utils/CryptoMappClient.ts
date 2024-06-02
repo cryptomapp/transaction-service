@@ -21,6 +21,38 @@ export class CryptoMappClient {
     return CryptoMappClient.instance;
   }
 
+  async getPriorityFeeEstimate(
+    priorityLevel: string,
+    serializedTransaction: Buffer
+  ) {
+    const response = await fetch(
+      "https://mainnet.helius-rpc.com/?api-key=a2a4b488-4dea-472e-ab8a-4268a9c5c78c",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "1",
+          method: "getPriorityFeeEstimate",
+          params: [
+            {
+              transaction: bs58.encode(serializedTransaction),
+              options: { priorityLevel: priorityLevel },
+            },
+          ],
+        }),
+      }
+    );
+    const data = await response.json();
+    console.log(
+      "Fee in function for",
+      priorityLevel,
+      " :",
+      data.result.priorityFeeEstimate
+    );
+    return data.result;
+  }
+
   async submitTransaction(
     signedDetails: SignedTransactionDetails
   ): Promise<string> {
@@ -41,6 +73,13 @@ export class CryptoMappClient {
 
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
+
+      const priorityFee = this.getPriorityFeeEstimate(
+        "HIGH",
+        serializedVersionedTransaction
+      );
+
+      console.log("priorityFee: ", priorityFee);
 
       // Fetch the latest blockhash with the processed commitment level
       const latestBlockHash = await this.connection.getLatestBlockhash(
