@@ -37,53 +37,44 @@ export class CryptoMappClient {
       // Convert serialized transaction to Transaction object
       let transaction = Transaction.from(serializedTransaction);
 
-      console.log("transaction: ", transaction);
-
-      console.log("[submitTransaction] before partialSign");
       // Sign the transaction as the fee payer before submission
       transaction.partialSign(this.serviceWallet);
-
-      console.log("transaction: ", transaction);
-      console.log("[submitTransaction] after partialSign");
 
       // Ensure the transaction is fully signed
       if (!transaction.verifySignatures()) {
         throw new Error("Signature verification failed.");
       }
 
-      console.log("Before serialisation");
-
       // Serialize the transaction for submission
       const serializedVersionedTransaction = transaction.serialize();
 
-      console.log("Before sendRawTransaction");
+      // Fetch the latest blockhash with the processed commitment level
+      const latestBlockHash = await this.connection.getLatestBlockhash(
+        "processed"
+      );
+
+      console.log("sending transaction...");
       // Submit the serialized transaction to the Solana blockchain
       const signature = await this.connection.sendRawTransaction(
         serializedVersionedTransaction,
         {
           skipPreflight: false,
-          preflightCommitment: "confirmed",
-          maxRetries: 5,
+          preflightCommitment: "processed",
+          maxRetries: 10, // Increased retries
         }
       );
 
-      const latestBlockHash = await this.connection.getLatestBlockhash();
-
-      console.log("Before confirmation");
-
+      console.log("confirming transaction...");
+      // Confirm the transaction with the latest valid blockhash information
       await this.connection.confirmTransaction({
         blockhash: latestBlockHash.blockhash,
         lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
         signature: signature,
       });
 
-      // Wait for the transaction to be confirmed
-      // await this.connection.confirmTransaction(signature, "confirmed");
-      // console.log("Transaction confirmed with signature:", signature);
-
       // Construct the Solscan URL
       const solscanUrl = `https://solscan.io/tx/${signature}`;
-      console.log("Solscan URL:", solscanUrl);
+      console.log("confirmed, ", solscanUrl);
 
       return signature;
     } catch (error) {
