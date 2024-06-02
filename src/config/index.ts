@@ -18,6 +18,7 @@ export const config = {
     process.env.PROGRAM_ADDRESS ||
     "8mDhNcko1rByfWLzVTuddx386JFwFnD3oDPWV2pzBckN",
   solanaProviderUrl: process.env.SOLANA_RPC || "https://api.devnet.solana.com",
+  wsProviderUrl: process.env.WS_ENDPOINT || "",
   solPrivateKey: createBase58Keypair(process.env.SERVICE_WALLET_SECRET_KEY),
 
   port: process.env.PORT || 8080,

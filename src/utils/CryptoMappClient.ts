@@ -1,10 +1,4 @@
-import {
-  ComputeBudgetProgram,
-  Connection,
-  Keypair,
-  Transaction,
-  clusterApiUrl,
-} from "@solana/web3.js";
+import { Connection, Keypair, Transaction } from "@solana/web3.js";
 import bs58 from "bs58";
 import { config } from "../config";
 import { SignedTransactionDetails } from "../models/SingedTransactionDetails";
@@ -15,7 +9,10 @@ export class CryptoMappClient {
   private serviceWallet: Keypair;
 
   private constructor() {
-    this.connection = new Connection(config.solanaProviderUrl, "confirmed");
+    this.connection = new Connection(config.solanaProviderUrl, {
+      wsEndpoint: config.wsProviderUrl,
+      commitment: "confirmed",
+    });
     const secretKeyUint8Array = bs58.decode(config.solPrivateKey);
     this.serviceWallet = Keypair.fromSecretKey(secretKeyUint8Array);
   }
